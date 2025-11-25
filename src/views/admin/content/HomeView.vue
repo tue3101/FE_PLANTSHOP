@@ -68,18 +68,27 @@
           </div>
         </div>
 
-        <!-- Tổng Sản Phẩm -->
+        <!-- Tổng Sản Phẩm Bán Được -->
         <div
           class="relative p-6 rounded-xl shadow-lg bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden">
           <div class="absolute top-0 right-0 w-20 h-20 bg-green-200 rounded-full -mr-10 -mt-10 opacity-20"></div>
           <div class="relative">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-green-800">Tổng Sản Phẩm</h2>
+              <div>
+                <h2 class="text-lg font-semibold text-green-800">
+                  {{ viewType === 'year' ? `Tổng Sản Phẩm Bán Năm` :
+                    `Tổng Sản Phẩm Bán Tháng` }}
+                </h2>
+                <p class="text-sm text-green-600 mt-1">
+                  {{ viewType === 'year' ? selectedYear :
+                    `${selectedMonth}/${selectedYear}` }}
+                </p>
+              </div>
               <div class="p-3 bg-green-500 rounded-lg shadow-md">
                 <Package class="w-6 h-6 text-white" />
               </div>
             </div>
-            <p class="text-3xl font-bold text-green-700">{{ formatNumber(totalProducts) }}</p>
+            <p class="text-3xl font-bold text-green-700">{{ formatNumber(totalProductsSold) }}</p>
           </div>
         </div>
 
@@ -266,7 +275,7 @@ const barRevenuePlugin = {
 // Đăng ký plugins
 ChartJS.register(percentagePlugin, barRevenuePlugin)
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
-import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear,  getTopProductsByMonth, getTopProductsByYear } from '@/api/statistics/get'
+import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear, getTopProductsByMonth, getTopProductsByYear } from '@/api/statistics/get'
 import { getAllUser } from '@/api/user/get'
 import { getAllProducts } from '@/api/products/get'
 import { Users, Package, DollarSign, ShoppingCart } from "lucide-vue-next"
@@ -340,6 +349,18 @@ const topProducts = ref([])
 // Total counts
 const totalUsers = ref(0)
 const totalProducts = ref(0)
+
+// Computed property để tính tổng số lượng sản phẩm đã bán theo bộ lọc
+const totalProductsSold = computed(() => {
+  if (!topProducts.value || topProducts.value.length === 0) {
+    return 0
+  }
+  // Tính tổng số lượng từ top products (mỗi product có totalQuantitySold)
+  return topProducts.value.reduce((total, product) => {
+    const quantity = product.totalQuantitySold || 0
+    return total + Number(quantity)
+  }, 0)
+})
 
 // Available years (current year and 2 years before)
 const availableYears = computed(() => {

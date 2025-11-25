@@ -60,7 +60,8 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         Đánh giá của bạn:
                                     </label>
-                                    <StarRating v-model="productItem.rating" :disabled="isSubmittingAll || productItem.isSubmitting" />
+                                    <StarRating v-model="productItem.rating"
+                                        :disabled="isSubmittingAll || productItem.isSubmitting" />
                                 </div>
 
                                 <div class="mb-4">
@@ -80,8 +81,7 @@
 
                                 <!-- Submit Single Review Button -->
                                 <div class="flex justify-end mt-4">
-                                    <button type="button" 
-                                        @click="handleSubmitSingleReview(productItem)"
+                                    <button type="button" @click="handleSubmitSingleReview(productItem)"
                                         :disabled="!canSubmitSingle(productItem) || productItem.isSubmitting"
                                         class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer font-semibold">
                                         {{ productItem.isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá' }}
@@ -220,12 +220,14 @@ const loadProductsToReview = async () => {
         if (order.order_details && order.order_details.length > 0) {
             for (const detail of order.order_details) {
                 const productId = detail.product?.product_id || detail.product_id
+                const orderDetailId = detail.order_detail_id
 
-                // Check if user has already reviewed this product
+                // Check if user has already reviewed this order_detail_id (not product_id)
+                // Mỗi lần mua (mỗi order_detail_id) sẽ có một đánh giá riêng
                 const existingReview = userReviews.find(
                     r => {
-                        const reviewProductId = r.product_id || r.product?.product_id
-                        return reviewProductId === productId
+                        const reviewOrderDetailId = r.order_detail_id || r.orderDetailId
+                        return reviewOrderDetailId && String(reviewOrderDetailId) === String(orderDetailId)
                     }
                 )
 
@@ -233,9 +235,10 @@ const loadProductsToReview = async () => {
                     product_id: productId,
                     product: detail.product,
                     order_id: order.order_id,
+                    order_detail_id: orderDetailId,
                     quantity: detail.quantity,
-                    rating: 0,
-                    comment: '',
+                    rating: existingReview ? (existingReview.rating || 0) : 0,
+                    comment: existingReview ? (existingReview.comment || '') : '',
                     hasReview: !!existingReview,
                     existingReview: existingReview || null,
                     isSubmitting: false,
@@ -282,6 +285,13 @@ const handleSubmitAllReviews = async () => {
         return
     }
 
+    // Validate all products have order_detail_id
+    const productsWithoutOrderDetail = unreviewedProducts.filter(item => !item.order_detail_id)
+    if (productsWithoutOrderDetail.length > 0) {
+        submitAllError.value = 'Một số sản phẩm không có thông tin chi tiết đơn hàng!'
+        return
+    }
+
     isSubmittingAll.value = true
     submitAllError.value = ''
 
@@ -290,6 +300,7 @@ const handleSubmitAllReviews = async () => {
         const reviewPromises = unreviewedProducts.map(async (productItem) => {
             const reviewData = {
                 product_id: productItem.product_id,
+                order_detail_id: productItem.order_detail_id,
                 rating: productItem.rating,
                 comment: productItem.comment || ''
             }
@@ -298,7 +309,11 @@ const handleSubmitAllReviews = async () => {
 
         await Promise.all(reviewPromises)
 
-        // Reload to update hasReview status
+        // Reload user reviews and products to update hasReview status
+        const userId = authStore.userId
+        if (userId) {
+            await reviewStore.getReviewsByUserIdStore(userId)
+        }
         await loadProductsToReview()
 
         // Show success message (optional)
@@ -322,12 +337,19 @@ const handleSubmitSingleReview = async (productItem) => {
         return
     }
 
+    // Validate order_detail_id before creating review
+    if (!productItem.order_detail_id) {
+        productItem.reviewError = 'Không tìm thấy thông tin chi tiết đơn hàng!'
+        return
+    }
+
     productItem.isSubmitting = true
     productItem.reviewError = ''
 
     try {
         const reviewData = {
             product_id: productItem.product_id,
+            order_detail_id: productItem.order_detail_id,
             rating: productItem.rating,
             comment: productItem.comment || ''
         }
@@ -336,11 +358,15 @@ const handleSubmitSingleReview = async (productItem) => {
             // Update existing review
             await reviewStore.updateReviewStore(productItem.existingReview.review_id, reviewData)
         } else {
-            // Create new review
+            // Create new review (requires order_detail_id)
             await reviewStore.createReviewStore(reviewData)
         }
 
-        // Reload to update hasReview status
+        // Reload user reviews and products to update hasReview status
+        const userId = authStore.userId
+        if (userId) {
+            await reviewStore.getReviewsByUserIdStore(userId)
+        }
         await loadProductsToReview()
     } catch (error) {
         productItem.reviewError = error.response?.data?.message || error.message || 'Không thể gửi đánh giá!'

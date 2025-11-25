@@ -212,7 +212,7 @@ const loadUserReviews = async () => {
     }
 }
 
-// Check if all products in order have been reviewed
+// Check if all order_details in order have been reviewed (based on order_detail_id)
 const hasAllProductsReviewed = computed(() => {
     if (!props.order.order_details || props.order.order_details.length === 0) {
         return false
@@ -223,15 +223,15 @@ const hasAllProductsReviewed = computed(() => {
         return false
     }
 
-    // Check if all products in order have reviews
+    // Check if all order_details have reviews (each order_detail_id should have its own review)
     const allReviewed = props.order.order_details.every(detail => {
-        const productId = detail.product?.product_id || detail.product_id
-        if (!productId) return false
+        const orderDetailId = detail.order_detail_id
+        if (!orderDetailId) return false
 
-        // Check if there's a review for this product
+        // Check if there's a review for this order_detail_id
         return userReviews.value.some(review => {
-            const reviewProductId = review.product_id || review.product?.product_id
-            return reviewProductId === productId || String(reviewProductId) === String(productId)
+            const reviewOrderDetailId = review.order_detail_id || review.orderDetailId
+            return reviewOrderDetailId && String(reviewOrderDetailId) === String(orderDetailId)
         })
     })
 
@@ -575,19 +575,19 @@ const handleImageError = (event) => {
 // Sử dụng fullOrderInfo nếu đã load, nếu không thì dùng props.order
 const getShippingUsername = () => {
     const order = fullOrderInfo.value || props.order
-    const username = order.shipping_name 
+    const username = order.shipping_name
     return username
 }
 
 const getShippingPhone = () => {
     const order = fullOrderInfo.value || props.order
-    const phone = order.shipping_phone 
+    const phone = order.shipping_phone
     return phone
 }
 
 const getShippingAddress = () => {
     const order = fullOrderInfo.value || props.order
-    const address = order.shipping_address 
+    const address = order.shipping_address
     return address
 }
 </script>

@@ -7,7 +7,7 @@
         <router-link to="/dashboard/personal" class="border-4 border-white/0 rounded-full p-1">
           <img src="/img/user.png" alt="avatar" class="w-20 h-20 rounded-full bg-white" />
         </router-link>
-        <div class="text-white text-sm mt-2 font-semibold">{{ user.email }}</div>
+        <div class="text-white text-sm mt-2 font-semibold">{{ userEmail }}</div>
       </div>
 
       <div class="flex flex-col items-center gap-1">
@@ -32,7 +32,7 @@
 
 <script setup>
 import { useRouter, useRoute } from "vue-router"
-import { ref, computed, onMounted } from "vue"
+import { computed, onMounted, watch } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { useUserStore } from "@/stores/user"
 
@@ -66,23 +66,34 @@ const handleLogout = async () => {
   }
 }
 
-const user = ref({
-  email: ''
+// Sử dụng computed để tự động cập nhật khi userStore.userInfo thay đổi
+const userEmail = computed(() => {
+  return userStore.userInfo?.email || ''
 })
 
-onMounted(async () => {
-  try {
-    const token = authStore.accessToken
-    if (token) {
-      await userStore.getInfo(token)
-      if (userStore.userInfo) {
-        user.value = {
-          email: userStore.userInfo.email || ''
-        }
+// Hàm load user info
+const loadUserInfo = async () => {
+  if (authStore.isAuthenticated && authStore.accessToken) {
+    // Load lại user info nếu chưa có
+    if (!userStore.userInfo) {
+      try {
+        await userStore.getInfo(authStore.accessToken)
+      } catch (error) {
+        console.error(error)
       }
     }
-  } catch (error) {
-    console.error(error)
+  }
+}
+
+// Load user info khi component mount
+onMounted(() => {
+  loadUserInfo()
+})
+
+// Theo dõi khi authentication state thay đổi để load lại user info
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    loadUserInfo()
   }
 })
 </script>
