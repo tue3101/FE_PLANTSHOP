@@ -20,10 +20,11 @@
 
                     <div class="flex items-center justify-between text-sm">
                         <button type="button" @click="handleResendOtp" :disabled="countdown > 0"
-                            class="text-blue-600 hover:text-blue-800 underline disabled:text-gray-400 disabled:no-underline">
+                            class="text-blue-600 hover:text-blue-800 underline disabled:text-gray-400 disabled:no-underline cursor-pointer">
                             {{ countdown > 0 ? `Gửi lại sau ${countdown}s` : 'Gửi lại mã OTP' }}
                         </button>
-                        <button type="button" @click="handleBack" class="text-gray-600 hover:text-gray-800">
+                        <button type="button" @click="handleBack"
+                            class="text-gray-600 hover:text-gray-800 cursor-pointer">
                             Quay lại
                         </button>
                     </div>
@@ -38,6 +39,9 @@
 
                 <div v-if="errorMessage" class="text-red-600 text-sm text-center mt-2">
                     {{ errorMessage }}
+                    <button type="button" @click="handleBack" class="text-blue-700 hover:text-blue-400 cursor-pointer">
+                        Quay lại
+                    </button>
                 </div>
 
                 <div v-if="isLoading" class="text-center py-8">
@@ -80,7 +84,26 @@ const validateOtp = (otp) => {
 const handleOtpInput = (event) => {
     const value = event.target.value.replace(/\D/g, '') // Chỉ giữ lại số
     otpCode.value = value.slice(0, 6) // Giới hạn 6 chữ số
-    // Không auto submit, người dùng phải tự bấm nút
+}
+
+// Đảm bảo luôn có đủ thông tin đăng ký trước khi gửi OTP
+const ensureRegisterInfo = () => {
+    if (email.value && username.value && password.value) {
+        return true
+    }
+
+    const storedEmail = sessionStorage.getItem('register_email')
+    const storedUsername = sessionStorage.getItem('register_username')
+    const storedPassword = sessionStorage.getItem('register_password')
+
+    if (storedEmail && storedUsername && storedPassword) {
+        email.value = storedEmail
+        username.value = storedUsername
+        password.value = storedPassword
+        return true
+    }
+
+    return false
 }
 
 // Gửi lại OTP
@@ -89,11 +112,21 @@ const handleResendOtp = async () => {
 
     resetError()
 
+    if (!ensureRegisterInfo()) {
+        errorMessage.value = 'Không tìm thấy thông tin đăng ký, vui lòng đăng ký lại.'
+        router.push('/register')
+        return
+    }
+
+    const resendUsername = username.value
+    const resendEmail = email.value
+    const resendPassword = password.value
+
     await executeAsync(
         async () => {
-            const response = await authStore.sendOtpToEmail(username.value, email.value, password.value)
+            const response = await authStore.sendOtpToEmail(resendUsername, resendEmail, resendPassword)
             if (response?.data?.success) {
-                countdown.value = 60
+                countdown.value = 30
                 startCountdown()
             }
         },
@@ -103,10 +136,10 @@ const handleResendOtp = async () => {
     )
 }
 
-// Countdown timer
+// bắt đầu đếm ngược
 const startCountdown = () => {
     if (countdownTimer) {
-        clearInterval(countdownTimer)
+        clearInterval(countdownTimer) //dừng timer cũ
     }
 
     countdownTimer = setInterval(() => {
@@ -116,7 +149,7 @@ const startCountdown = () => {
             clearInterval(countdownTimer)
             countdownTimer = null
         }
-    }, 1000)
+    }, 1000) // thực thi mỗi 1 giây
 }
 
 // Cleanup timer khi component unmount
@@ -227,14 +260,14 @@ onMounted(() => {
         return
     }
 
-    // Focus vào input OTP
+    // đợi UI render xong mới focus
     nextTick(() => {
         if (otpInputRef.value) {
-            otpInputRef.value.focus()
+            otpInputRef.value.focus() //đưa trỏ chuột vào ô
         }
     })
 
-    // Bắt đầu countdown nếu có
+    // Bắt đầu countdown 
     const savedCountdown = sessionStorage.getItem('otp_countdown')
     if (savedCountdown && parseInt(savedCountdown) > 0) {
         countdown.value = parseInt(savedCountdown)

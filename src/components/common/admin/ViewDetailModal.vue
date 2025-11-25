@@ -126,10 +126,21 @@ const formatValue = (value, field) => {
 
     // Format price
     if (field.type === 'price' || field.format === 'price') {
+        // Xử lý các trường hợp null, undefined, hoặc không phải số
+        let numValue = 0
+        if (typeof value === 'string') {
+            const cleaned = value.replace(/[^\d.]/g, '')
+            numValue = parseFloat(cleaned) || 0
+        } else if (typeof value === 'number') {
+            numValue = isNaN(value) ? 0 : value
+        } else {
+            numValue = 0
+        }
+
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
             currency: 'VND'
-        }).format(Number(value))
+        }).format(numValue)
     }
 
     // Format select options

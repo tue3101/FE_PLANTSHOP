@@ -14,14 +14,13 @@ import VerifyOtpView from "@/views/auth/VerifyOtpView.vue"
 import ContactPage from "@/views/user/content/ContactPage.vue"
 import HomePage from "@/views/user/content/HomePage.vue"
 import ProductPage from "@/views/user/content/ProductPage.vue"
-import ProductDetailPage from "@/components/product/ProductDetailPage.vue"
 import { Home, Package, Users, Folder, Percent, ShoppingCart, Star } from "lucide-vue-next"
 import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from '@/stores/auth'
 import CartPage from "@/views/user/content/CartPage.vue"
 import GoogleCallbackView from "@/views/auth/GoogleCallbackView.vue"
 import UserInfoPage from "@/views/components/UserInfoPage.vue"
-import CheckoutPage from "@/views/user/content/CheckInfoPage.vue"
+import CheckoutPage from "@/views/user/content/payment/CheckInfoPage.vue"
 import PaymentPage from "@/views/user/content/payment/PaymentPage.vue"
 import OrderPage from "@/views/user/content/order/OrderPage.vue"
 import OrderHistoryPage from "@/views/user/content/order/OrderHistoryPage.vue"
@@ -29,6 +28,7 @@ import PaymentReturnPage from "@/views/user/content/payment/PaymentReturnPage.vu
 import ReviewPage from "@/views/user/content/ReviewPage.vue"
 import TransactionView from "@/views/admin/content/TransactionView.vue"
 import { DollarSign } from "lucide-vue-next"
+import ProductDetailPage from "@/components/common/user/product/ProductDetailPage.vue"
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior(to, from, savedPosition) {

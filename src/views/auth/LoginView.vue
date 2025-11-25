@@ -56,7 +56,7 @@ const handleLogin = async (credentials) => {
   )
 }
 
-// Xử lý Google login
+// Xử lý Google login gửi code cho GoogleCallbackView 
 const handleGoogleLogin = async () => {
   try {
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -70,7 +70,9 @@ const handleGoogleLogin = async () => {
     }
 
     // `${window.location.origin} => tự động lấy domain hiện tại
+    //URI gg gửi code về BE để xử lý
     const REDIRECT_URI = `${window.location.origin}/auth/google/callback`
+    // const REDIRECT_URI = router.push('/auth/google/callback')
 
     // Tạo URL cho Google OAuth với các tham số đúng format
     const params = new URLSearchParams({
@@ -86,9 +88,9 @@ const handleGoogleLogin = async () => {
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
 
     // Lưu return URL vào sessionStorage để redirect sau khi login
-    sessionStorage.setItem('returnUrl', router.currentRoute.value.fullPath)
+    // sessionStorage.setItem('returnUrl', router.currentRoute.value.fullPath)
 
-    // Redirect đến Google OAuth
+    // Redirect đến Google OAuth chọn email xác nhận
     window.location.href = authUrl
   } catch (error) {
     console.error('Google login error:', error)

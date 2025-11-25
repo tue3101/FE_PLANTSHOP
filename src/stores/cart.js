@@ -28,7 +28,8 @@ export const useCartStore = defineStore("cart", () => {
         cartItems.value = Array.isArray(data)
           ? data.map((item) => {
               const product = item.products
-              return {
+             
+              const cartItem = {
                 ...product,
                 product_id: product.product_id,
                 product_name: product.product_name,
@@ -38,7 +39,13 @@ export const useCartStore = defineStore("cart", () => {
                 cart_detail_id: item.cart_detail_id,
                 selected: item.selected ?? true,
                 stock: product.quantity || 0,
+                out_of_stock: product.out_of_stock,
+                products: product, 
+                is_deleted: product._deleted,
               }
+              
+      
+              return cartItem
             })
           : []
       } else {
@@ -109,6 +116,7 @@ export const useCartStore = defineStore("cart", () => {
   }
 
 
+  //reduce sẽ khởi tạo sum=0 và duyệt từng item trong cartItems và cộng dồn
   // Tính tổng số lượng sản phẩm trong giỏ
   const totalItems = computed(() => {
     return cartItems.value.reduce((sum, item) => sum + item.quantity, 0)

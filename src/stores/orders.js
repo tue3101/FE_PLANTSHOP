@@ -8,7 +8,7 @@ import {
     getOrderDetailsByOrderId,
     getOrderDetailById
 } from "@/api/orders/get"
-import { updateOrderDetail, updateOrderStatus, updateOrderShippingStatus } from "@/api/orders/put"
+import { updateOrderDetail, updateOrderStatus, updateOrderShippingStatus, updateOrderShippingInfo } from "@/api/orders/put"
 import { deleteOrderDetail, deleteOrder } from "@/api/orders/delete"
 import { useAuthStore } from "@/stores/auth"
 
@@ -196,6 +196,18 @@ export const useOrderStore = defineStore("order", () => {
         }
     }
 
+    // Cập nhật thông tin giao hàng (shipping_name, shipping_address, shipping_phone)
+    const updateOrderShippingInfoStore = async (orderId, shippingInfo) => {
+        const token = authStore.accessToken
+        try {
+            const response = await updateOrderShippingInfo(orderId, token, shippingInfo)
+            return response
+        } catch (error) {
+            console.error("Update order shipping info error:", error.message)
+            throw error
+        }
+    }
+
     // Xóa đơn hàng
     const deleteOrderStore = async (orderId) => {
         const token = authStore.accessToken
@@ -255,6 +267,7 @@ export const useOrderStore = defineStore("order", () => {
         cancelOrderStore,
         updateOrderStatusStore,
         updateOrderShippingStatusStore,
+        updateOrderShippingInfoStore,
         deleteOrderStore,
         deleteOrderWithKeepalive,
     }

@@ -5,9 +5,9 @@
     <input v-model="password" type="password" placeholder="Mật khẩu" class="border px-3 py-2 rounded" required />
 
     <!-- Button đăng ký -->
-    <button type="submit" :disabled="isLoading || isSendingOtp"
+    <button type="submit" :disabled="isSendingOtp"
       class="bg-green-700 text-white py-2 rounded mt-2 hover:bg-green-600 hover:cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
-      {{ isLoading ? 'ĐANG XỬ LÝ...' : isSendingOtp ? 'ĐANG GỬI MÃ OTP...' : 'ĐĂNG KÝ' }}
+      {{ isSendingOtp ? 'ĐANG XỬ LÝ...' : 'ĐĂNG KÝ' }}
     </button>
 
     <div v-if="errorMessage" class="text-red-600 text-sm text-center mt-2">
@@ -29,7 +29,7 @@ import { useAuthStore } from '@/stores/auth'
 defineProps({
   isLoading: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   errorMessage: {
     type: String,
@@ -76,7 +76,7 @@ const handleSendOtp = async () => {
       sessionStorage.setItem('register_email', email.value)
       sessionStorage.setItem('register_username', username.value)
       sessionStorage.setItem('register_password', password.value)
-      sessionStorage.setItem('otp_countdown', '60')
+      sessionStorage.setItem('otp_countdown', '30')
 
       // Redirect đến trang nhập OTP
       router.push({

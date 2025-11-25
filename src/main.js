@@ -101,6 +101,18 @@ axios.interceptors.response.use(
             const authStore = useAuthStore()
             authStore.accessToken = newAccessToken
             authStore.refreshToken = newRefreshToken
+            
+            // Reload user info sau khi refresh token thành công
+            try {
+              const { useUserStore } = await import('./stores/user')
+              const userStore = useUserStore()
+              // Chỉ reload nếu user đã đăng nhập và có userId
+              if (authStore.isAuthenticated && authStore.userId) {
+                await userStore.getInfo(newAccessToken)
+              }
+            } catch (userErr) {
+              console.error('Error reloading user info after token refresh:', userErr)
+            }
           } catch (err) {
             console.error(err)
           }

@@ -35,22 +35,26 @@
         <div v-else class="overflow-x-auto">
             <h2 class="text-2xl font-bold mb-2">DANH SÁCH ĐƠN HÀNG</h2>
             <DataPager v-model="currentPage" :items="filteredOrders" :page-size="PAGE_SIZE" :show-filter="true"
-                :show-status-filter="true" :status-options="statusOptions" v-model:selected-status="statusFilter"
+                :show-status-filter="true" :show-shipping-status-filter="true"
+                :shipping-status-option="shippingStatusOptions" :status-options="statusOptions"
+                v-model:selected-status="statusFilter" v-model:selected-shipping-status="shippingStatusFilter"
                 controls-class="mb-2">
                 <template #default="{ items }">
                     <CommonTable
-                        :headers="['ID', 'NGƯỜI ĐẶT', 'EMAIL', 'TỔNG CỘNG', 'GIẢM GIÁ', 'NGÀY ĐẶT', 'TRẠNG THÁI ĐƠN', 'TRẠNG THÁI GIAO HÀNG']"
-                        :keys="['order_id', 'customer', 'email', 'total', 'discount', 'orderDate', 'status', 'shipping_status']"
+                        :headers="['ID', 'TÊN KHÁCH HÀNG', 'NOTE', 'TỔNG CỘNG', 'NGÀY ĐẶT', 'TRẠNG THÁI ĐƠN', 'TRẠNG THÁI GIAO HÀNG']"
+                        :keys="['order_id', 'customer', 'note', 'total', 'orderDate', 'status', 'shipping_status']"
                         :data="items" row-key="order_id" title-class="font-bold text-2xl">
                         <template #cell-customer="{ item }">
                             {{ getCustomerName(item) }}
                         </template>
-                        <template #cell-email="{ item }">
-                            {{ getCustomerEmail(item) }}
+                        <template #cell-note="{ item }">
+                            <span class="text-sm text-gray-600 max-w-xs truncate block" :title="getOrderNote(item)">
+                                {{ getOrderNote(item) }}
+                            </span>
                         </template>
                         <template #cell-total="{ item }">
                             <span class="font-semibold text-green-600">{{ formatPrice(item.final_total || item.total)
-                            }}</span>
+                                }}</span>
                         </template>
                         <template #cell-discount="{ item }">
                             <span class="text-red-600">{{ formatPrice(item.discount || 0) }}</span>
@@ -90,9 +94,150 @@
             </DataPager>
         </div>
 
-        <!-- View Detail Modal -->
-        <ViewDetailModal :showModal="showViewModal" :title="'Chi tiết Đơn Hàng'" :item="selectedOrder"
-            :fields="orderFields" :options="{}" @close="closeViewModal" @update:showModal="showViewModal = $event" />
+        <!-- Order Detail Modal -->
+        <div v-if="showViewModal" class="fixed inset-0 flex items-center justify-center z-50  bg-opacity-50"
+            @click.self="closeViewModal">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="flex  p-6 border-b bg-gray-50">
+                    <div class="flex w-full">
+                        <h2 class="text-2xl font-bold text-gray-800">Chi tiết đơn #{{ selectedOrder?.order_id }}</h2>
+                    </div>
+                    <button @click="closeViewModal"
+                        class="text-gray-500 hover:text-gray-700 transition-colors cursor-pointer ml-4">
+                        <X :size="24" />
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-6">
+                    <div v-if="selectedOrder">
+                        <!-- Customer Information -->
+                        <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">Tên khách hàng:</label>
+                                <p class="text-gray-900 font-medium">{{ selectedOrder.customer || 'Không có' }}</p>
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">Số điện thoại:</label>
+                                <p class="text-gray-900">{{ selectedOrder.phone || 'Không có' }}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">Địa chỉ:</label>
+                                <p class="text-gray-900">{{ selectedOrder.address || 'Không có' }}</p>
+                            </div>
+
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">Ngày đặt:</label>
+                                <p class="text-gray-900">{{ selectedOrder.created_at || 'Không có' }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Product Details Table -->
+                        <div class="mb-4">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full border-collapse border border-gray-300">
+                                    <thead>
+                                        <tr class="bg-gray-100 text-left">
+                                            <th
+                                                class="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700">
+                                                Mã sản phẩm</th>
+                                            <th
+                                                class="border border-gray-300 px-4 py-3  text-sm font-semibold text-gray-700">
+                                                Tên sản phẩm</th>
+                                            <th
+                                                class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                                                Số lượng</th>
+                                            <th
+                                                class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                                                Đơn giá</th>
+                                            <th
+                                                class="border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                                                Tạm tính</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr
+                                            v-if="!selectedOrder.order_details || selectedOrder.order_details.length === 0">
+                                            <td colspan="5"
+                                                class="border border-gray-300 px-4 py-4 text-center text-gray-500">
+                                                Không có sản phẩm nào
+                                            </td>
+                                        </tr>
+                                        <tr v-for="(detail, index) in selectedOrder.order_details" :key="index"
+                                            class="hover:bg-gray-50">
+                                            <td class="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                                                {{ detail.product_id || detail.product?.product_id || 'N/A' }}
+                                            </td>
+                                            <td class="border border-gray-300 px-4 py-3 text-sm text-gray-900">
+                                                {{ detail.product_name || detail.product?.product_name || 'N/A' }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-4 py-3 text-sm text-gray-900 text-center">
+                                                {{ detail.quantity || 0 }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-4 py-3 text-sm text-gray-900 text-center">
+                                                {{ formatPrice(detail.price_at_order || detail.price || 0) }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900 text-center">
+                                                {{ formatPrice((detail.price_at_order || detail.price || 0) *
+                                                    (detail.quantity
+                                                        || 0)) }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Order Summary -->
+                        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <div class="flex justify-end">
+                                <div class="w-full md:w-1/2 space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">Tạm tính:</span>
+                                        <span class="text-gray-900 font-medium">{{ formatPrice(selectedOrder.total || 0)
+                                        }}</span>
+                                    </div>
+                                    <div v-if="selectedOrder.discount > 0" class="flex justify-between text-sm">
+                                        <span class="text-gray-600">Giảm giá:</span>
+                                        <span class="text-red-600 font-medium">-{{ formatPrice(selectedOrder.discount ||
+                                            0)
+                                        }}</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">Phí vận chuyển:</span>
+                                        <span class="text-gray-900 font-medium">{{
+                                            formatPrice(selectedOrder.shipping_fee || 0)
+                                        }}</span>
+                                    </div>
+                                    <div
+                                        class="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
+                                        <span class="text-gray-800">Tổng cộng:</span>
+                                        <span class="text-green-600">{{ formatPrice(selectedOrder.final_total || 0)
+                                        }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center text-gray-500 py-8">
+                        Không có dữ liệu để hiển thị
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end p-6 border-t bg-gray-50">
+                    <button @click="closeViewModal"
+                        class="px-6 py-2 bg-gray-300 rounded hover:bg-gray-400 transition-colors cursor-pointer">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- Update Status Modal -->
         <div v-if="showUpdateStatusModal" class="fixed inset-0  flex items-center justify-center z-50"
@@ -193,7 +338,6 @@
 <script setup>
 import CommonTable from '@/components/common/admin/CommonTable.vue'
 import DataPager from '@/components/common/DataPager.vue'
-import ViewDetailModal from '@/components/common/admin/ViewDetailModal.vue'
 import ButtonCommon from '@/components/common/admin/ButtonCommon.vue'
 import SearchCommon from '@/components/common/SearchCommon.vue'
 import { ref, computed, onMounted } from 'vue'
@@ -204,6 +348,7 @@ const PAGE_SIZE = 8
 const currentPage = ref(1)
 const searchQuery = ref('')
 const statusFilter = ref('')
+const shippingStatusFilter = ref('')
 const { isLoading, errorMessage, executeAsync, resetError } = useAsyncOperation()
 
 const orderStore = useOrderStore()
@@ -214,7 +359,11 @@ const statusOptions = [
     { value: 'CONFIRMED', label: 'Đã xác nhận' },
     { value: 'CANCELLED', label: 'Đã hủy' }
 ]
-
+const shippingStatusOptions = [
+    { value: 'NOT_DELIVERED', label: 'Chưa giao' }, // Gộp UNDELIVERED, PREPARING_ORDER, SHIPPING
+    { value: 'DELIVERED', label: 'Đã giao' },
+    { value: 'CANCELLED', label: 'Giao thất bại' }
+]
 
 // Computed để filter orders (chỉ filter theo search query, status filter được xử lý bởi DataPager)
 const filteredOrders = computed(() => {
@@ -233,6 +382,9 @@ const filteredOrders = computed(() => {
 
     return orders
 })
+
+
+
 
 // Load orders
 const loadOrders = async () => {
@@ -329,48 +481,96 @@ const getCustomerEmail = (order) => {
     return 'Không có email'
 }
 
+// Lấy note từ order (có thể ở nhiều nơi)
+const getOrderNote = (order) => {
+    // Ưu tiên lấy từ order.note hoặc order.shipping_note
+    if (order.note) return order.note
+    if (order.shipping_note) return order.shipping_note
+
+    // Nếu không có, thử lấy từ order_details (nếu đã load)
+    if (order.order_details && order.order_details.length > 0) {
+        const note = order.order_details[0]?.note
+        if (note) return note
+    }
+
+    return 'Không có'
+}
+
+// Tính phí vận chuyển dựa trên số lượng sản phẩm
+const calculateShippingFee = (orderDetails, subTotal = 0) => {
+    if (!orderDetails || orderDetails.length === 0) return 0
+
+    // Tính tổng số lượng sản phẩm
+    const totalQuantity = orderDetails.reduce((sum, detail) => {
+        return sum + (detail.quantity || 0)
+    }, 0)
+
+    // Kiểm tra điều kiện freeship: >= 15 sản phẩm và tổng >= 4,000,000
+    if (totalQuantity >= 15 && subTotal >= 4000000) {
+        return 0
+    }
+
+    // Tính phí vận chuyển theo số lượng
+    if (totalQuantity <= 5) {
+        return 50000
+    } else if (totalQuantity <= 10) {
+        return 70000
+    } else if (totalQuantity <= 15) {
+        return 100000
+    } else {
+        return 100000
+    }
+}
+
 // View Detail Modal
 const showViewModal = ref(false)
 const selectedOrder = ref(null)
 
-const orderFields = [
-    { key: 'order_id', label: 'Mã đơn hàng', type: 'text' },
-    { key: 'customer', label: 'Khách hàng', type: 'text' },
-    { key: 'email', label: 'Email', type: 'text' },
-    { key: 'phone', label: 'Số điện thoại', type: 'text' },
-    { key: 'address', label: 'Địa chỉ', type: 'text' },
-    { key: 'total', label: 'Tổng tiền', type: 'price', format: 'price' },
-    { key: 'discount', label: 'Giảm giá', type: 'price', format: 'price' },
-    { key: 'final_total', label: 'Thành tiền', type: 'price', format: 'price' },
-    { key: 'status', label: 'Trạng thái đơn hàng', type: 'text' },
-    { key: 'shipping_status', label: 'Trạng thái giao hàng', type: 'text' },
-    { key: 'created_at', label: 'Ngày đặt', type: 'text' },
-    { key: 'payment_method', label: 'Phương thức thanh toán', type: 'text' }
-]
-
 const openViewDetail = async (order) => {
     try {
         // Load order details nếu chưa có
-        if (!order.order_details) {
+        let orderDetails = order.order_details
+        if (!orderDetails || orderDetails.length === 0) {
             await orderStore.getOrderDetailsByOrderIdStore(order.order_id)
-            order.order_details = orderStore.currentOrderDetails
+            orderDetails = orderStore.currentOrderDetails || []
+        }
+
+        // Tính tổng tạm tính từ order_details
+        const subTotal = orderDetails.reduce((sum, detail) => {
+            return sum + (detail.sub_total || (detail.price_at_order || detail.price || 0) * (detail.quantity || 0))
+        }, 0)
+
+        // Tính phí vận chuyển: ưu tiên từ DB, nếu không có thì tính lại
+        let shippingFee = order.shipping_fee
+        if (!shippingFee || shippingFee === 0) {
+            shippingFee = calculateShippingFee(orderDetails, subTotal)
+        }
+
+        // Lấy note từ nhiều nguồn có thể
+        // Note có thể nằm ở: order.note, orderDetails[0]?.note, hoặc order.shipping_note
+        let orderNote = order.note
+        if (!orderNote && orderDetails && orderDetails.length > 0) {
+            // Lấy note từ order_detail đầu tiên (tất cả items đều có cùng note)
+            orderNote = orderDetails[0]?.note || ''
         }
 
         // Format order data for modal
         selectedOrder.value = {
             order_id: order.order_id,
-            customer: getCustomerName(order),
+            customer: order.shipping_name,
             email: getCustomerEmail(order),
-            phone: order.user?.phone_number || order.phone || 'Không có',
-            address: order.shipping_address || order.address || 'Không có',
-            total: order.total || 0,
+            phone: order.shipping_phone,
+            address: order.shipping_address ,
+            note: orderNote || 'Không có',
+            total: order.total || subTotal,
             discount: order.discount || 0,
-            shipping_fee: order.shipping_fee || 0,
+            shipping_fee: shippingFee,
             final_total: order.final_total || order.total || 0,
             status: getStatusText(order.status),
             shipping_status: getShippingStatusText(order.shipping_status),
             created_at: formatDate(order.created_at || order.order_date),
-            payment_method: order.payment?.method?.name || order.payment_method || 'COD'
+            payment_method: order.payment?.method?.name || order.payment_method || 'COD',
+            order_details: orderDetails 
         }
         showViewModal.value = true
     } catch (error) {
@@ -460,7 +660,14 @@ const handleUpdateShippingStatus = async () => {
     updateShippingStatusError.value = ''
 
     try {
+        const shouldCancelOrder = newShippingStatus.value === 'CANCELLED' && selectedOrderForShippingUpdate.value.status !== 'CANCELLED'
+
         await orderStore.updateOrderShippingStatusStore(selectedOrderForShippingUpdate.value.order_id, newShippingStatus.value)
+
+        if (shouldCancelOrder) {
+            await orderStore.updateOrderStatusStore(selectedOrderForShippingUpdate.value.order_id, 'CANCELLED')
+        }
+
         closeUpdateShippingStatusModal()
         await loadOrders() // Reload orders
     } catch (error) {

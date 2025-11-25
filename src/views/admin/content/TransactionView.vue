@@ -57,7 +57,8 @@
                         <template #actions="{ item }">
                             <div class="flex items-center gap-3">
                                 <div :class="[
-                                    '[&>div>button:not(:first-child):not(:nth-child(2))]:hidden'
+                                    '[&>div>button:not(:first-child):not(:nth-child(2))]:hidden',
+                                    (item.status === 'SUCCESS' || item.status === 'FAILED') && '[&>div>button:nth-child(2)]:hidden'
                                 ]">
                                     <ButtonCommon :selected-active="''" :item="item" @view="openViewDetail"
                                         @update="openUpdateStatusModal" />
@@ -183,8 +184,22 @@ const handleSearch = () => {
 
 // Format functions
 const formatPrice = (price) => {
-    if (!price && price !== 0) return '0 ₫'
-    const numPrice = typeof price === 'string' ? parseFloat(price.replace(/[^\d.]/g, '')) : price
+    // Xử lý các trường hợp null, undefined, hoặc không phải số
+    if (price === null || price === undefined || price === '') return '0 ₫'
+
+    // Chuyển đổi sang số
+    let numPrice = 0
+    if (typeof price === 'string') {
+        // Loại bỏ các ký tự không phải số và dấu chấm
+        const cleaned = price.replace(/[^\d.]/g, '')
+        numPrice = parseFloat(cleaned) || 0
+    } else if (typeof price === 'number') {
+        numPrice = isNaN(price) ? 0 : price
+    } else {
+        numPrice = 0
+    }
+
+    // Format số tiền
     return new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND'
@@ -244,13 +259,14 @@ const transactionFields = [
 const openViewDetail = async (transaction) => {
     try {
         // Format transaction data for modal
+        // Lưu ý: amount không format ở đây vì ViewDetailModal sẽ tự format dựa trên type: 'price'
         selectedTransaction.value = {
             payment_id: transaction.payment_id,
             order_id: transaction.order_id || transaction.order?.order_id || 'N/A',
             method: getPaymentMethodName(transaction),
-            amount: formatPrice(transaction.amount),
+            amount: transaction.amount || 0, // Giữ nguyên số để ViewDetailModal format
             status: getStatusText(transaction.status),
-            payment_date: formatDate(transaction.payment_date)
+            payment_date: formatDate(transaction.payment_date || transaction.created_at || transaction.createdAt)
         }
         showViewModal.value = true
     } catch (error) {

@@ -62,7 +62,7 @@ const handleLogout = async () => {
     await authStore.logout()
     router.push('/login')
   } catch (error) {
-    router.push('/login')
+    console.error(error)
   }
 }
 
@@ -82,7 +82,7 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    // Error handled silently
+    console.error(error)
   }
 })
 </script>

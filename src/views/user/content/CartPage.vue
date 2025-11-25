@@ -47,16 +47,37 @@
                             phẩm được chọn</span>
                     </div>
 
-                    <div v-for="(item) in cartStore.cartItems" :key="item.cart_detail_id"
-                        class="bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row gap-4">
+                    <div v-for="(item) in cartStore.cartItems" :key="item.cart_detail_id" :class="[
+                        'bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row gap-4 relative'
+
+                    ]">
                         <!-- Checkbox -->
                         <div class="flex items-start">
                             <input type="checkbox" :checked="isItemSelected(item)" @change="toggleItemSelection(item)"
-                                class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1">
+                                :disabled="isOutOfStock(item)" :class="[
+                                    'w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1',
+                                    isOutOfStock(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                ]">
                         </div>
+
+                        <!-- Overlay sản phẩm hết hàng -->
+                        <div v-if="isDeleted(item)"
+                            class="absolute inset-0 z-[5] flex items-center justify-center rounded-lg pointer-events-none">
+                            <div class="bg-white/50 bg-opacity-90 px-6 py-3 rounded-full shadow-lg">
+                                <p class="text-lg font-semibold text-red-500">Sản phẩm ngưng kinh doanh</p>
+                            </div>
+                        </div>
+                        <div v-else-if="isOutOfStock(item)"
+                            class="absolute inset-0 z-[5] flex items-center justify-center rounded-lg pointer-events-none">
+                            <div class="bg-white/50 bg-opacity-90 px-6 py-3 rounded-full shadow-lg">
+                                <p class="text-lg font-semibold text-red-500">Sản phẩm tạm hết</p>
+                            </div>
+                        </div>
+                       
+
                         <!-- Product Image -->
-                        <div
-                            class="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <div class="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
+                            :class="{ 'pointer-events-none opacity-50': isOutOfStock(item) || isDeleted(item) }">
                             <img :src="getProductImage(item)" :alt="getProductName(item)"
                                 class="max-w-full max-h-full w-auto h-auto object-contain"
                                 @error="handleImageError($event)" />
@@ -64,42 +85,50 @@
 
                         <!-- Product Info -->
                         <div class="flex-1 flex flex-col justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-800 mb-2">
-                                    {{ getProductName(item) }}
-                                </h3>
-                                <p class="text-xl font-bold text-green-600 mb-2">
-                                    {{ formatPrice(item.price) }}
-                                </p>
-
-                                <!-- Product Details -->
-                                <div class="space-y-1 mb-3">
-                                    <p v-if="item.size" class="text-sm text-gray-600">
-                                        Kích thước: {{ item.size }}
+                            <div class="flex-1 flex flex-col justify-between"
+                                :class="{ 'pointer-events-none opacity-50': isOutOfStock(item) || isDeleted(item) }">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                                        {{ getProductName(item) }}
+                                    </h3>
+                                    <p class="text-xl font-bold text-green-600 mb-2">
+                                        {{ formatPrice(item.price) }}
                                     </p>
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-medium text-gray-600">Số lượng còn lại:</span>
-                                        <span :class="[
-                                            'text-sm font-semibold',
-                                            getAvailableStock(item) > 0 ? 'text-green-600' : 'text-red-600'
-                                        ]">
-                                            {{ getAvailableStock(item) }} sản phẩm
-                                        </span>
+
+                                    <!-- Product Details -->
+                                    <div class="space-y-1 mb-3">
+                                        <p v-if="item.size" class="text-sm text-gray-600">
+                                            Kích thước: {{ item.size }}
+                                        </p>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm font-medium text-gray-600">Số lượng còn lại:</span>
+                                            <span :class="[
+                                                'text-sm font-semibold',
+                                                getAvailableStock(item) > 0 ? 'text-green-600' : 'text-red-600'
+                                            ]">
+                                                {{ getAvailableStock(item) }} sản phẩm
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
+
                             </div>
 
+
                             <!-- Quantity Control -->
-                            <div class="flex items-center justify-between mt-4">
-                                <div class="flex-1">
+                            <div class="flex items-end mt-4">
+                                <div class="flex-1"
+                                    :class="{ 'pointer-events-none opacity-70': isOutOfStock(item) || isDeleted(item) }">
                                     <QuantitySelector :model-value="item.quantity"
                                         @update:model-value="(value) => updateItemQuantityAndSelected(item, value)"
-                                        :min="1" :max="getMaxQuantity(item)" label="Số lượng mua:" :show-error="true" />
+                                        :min="1" :max="getMaxQuantity(item)"
+                                        :disabled="isOutOfStock(item) || isDeleted(item)" label="Số lượng mua:"
+                                        :show-error="true" />
                                 </div>
 
                                 <!-- Remove Button -->
                                 <button @click="removeItem(item)"
-                                    class="text-red-600 hover:text-red-800 font-medium text-sm flex items-center gap-1 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 ml-4 cursor-pointer">
+                                    class="relative z-20 text-red-500 hover:text-red-500/80 font-medium text-sm flex gap-1 transition-colors px-3 py-2 rounded-lg ml-4 cursor-pointer mb-6">
                                     <Trash2 :size="20" />
                                     Xóa
                                 </button>
@@ -107,7 +136,8 @@
                         </div>
 
                         <!-- Item Total -->
-                        <div class="flex-shrink-0 text-right">
+                        <div class="flex-shrink-0 text-right"
+                            :class="{ 'pointer-events-none opacity-50': isOutOfStock(item)|| isDeleted(item) }">
                             <p class="text-lg font-bold text-gray-800">
                                 {{ formatPrice((item.price || 0) * item.quantity) }}
                             </p>
@@ -276,8 +306,11 @@ const toggleSelectAll = async (event) => {
 
     // Optimistic update: cập nhật UI ngay lập tức
     if (shouldSelect) {
-        // Chọn tất cả
+        // Chọn tất cả (chỉ chọn sản phẩm còn hàng)
         cartStore.cartItems.forEach(item => {
+            // Bỏ qua sản phẩm hết hàng
+            if (isOutOfStock(item)) return
+
             const identifier = item.cart_detail_id
             selectedItems.value.add(identifier)
             item.selected = true
@@ -294,15 +327,17 @@ const toggleSelectAll = async (event) => {
     // Sử dụng Promise.all để gọi song song, không block UI
     if (userId) {
         try {
-            // Tạo array các promise để gọi API đồng loạt
-            const updatePromises = cartStore.cartItems.map(item => {
-                const identifier = item.cart_detail_id
-                return cartStore.updateQuantity(identifier, item.quantity, shouldSelect)
-                    .catch(error => {
-                        // Nếu một item lỗi, vẫn tiếp tục với các item khác
-                        return { error, identifier }
-                    })
-            })
+            // Tạo array các promise để gọi API đồng loạt (chỉ cho sản phẩm còn hàng)
+            const updatePromises = cartStore.cartItems
+                .filter(item => !isOutOfStock(item)) // Chỉ cập nhật sản phẩm còn hàng
+                .map(item => {
+                    const identifier = item.cart_detail_id
+                    return cartStore.updateQuantity(identifier, item.quantity, shouldSelect)
+                        .catch(error => {
+                            // Nếu một item lỗi, vẫn tiếp tục với các item khác
+                            return { error, identifier }
+                        })
+                })
 
             // Gọi tất cả API cùng lúc, không chờ từng cái
             const results = await Promise.all(updatePromises)
@@ -320,6 +355,12 @@ const toggleSelectAll = async (event) => {
 
 //===================================check 1 item===================================
 const toggleItemSelection = async (item) => {
+    // Không cho phép chọn sản phẩm hết hàng
+    if (isOutOfStock(item)) {
+        showNotification('Không thể chọn sản phẩm hết hàng!')
+        return
+    }
+
     const identifier = item.cart_detail_id
     const userId = getUserId()
     const isSelected = selectedItems.value.has(identifier)
@@ -358,6 +399,18 @@ const selectedTotalPrice = computed(() => {
             return sum + (price * item.quantity)
         }, 0)
 })
+
+// Kiểm tra sản phẩm có hết hàng không
+const isOutOfStock = (item) => {
+    const outOfStock = item?.out_of_stock ?? item?.products?.out_of_stock
+    return outOfStock === true
+}
+const isDeleted = (item) => {
+    const deletedFromItem = item?._deleted
+    const deleted = deletedFromItem 
+    const result = deleted === true
+    return result
+}
 
 // Lấy số lượng tồn kho hiện có của sản phẩm
 const getAvailableStock = (item) => {

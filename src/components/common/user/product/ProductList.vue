@@ -130,7 +130,7 @@ const loadProductRatings = async (products) => {
 
     // Lấy reviews cho từng sản phẩm (API công khai, không cần token)
     const ratingPromises = products.map(async (product) => {
-        const productId = product.product_id || product.id
+        const productId = product.product_id 
         if (!productId) return
 
         try {
@@ -139,7 +139,7 @@ const loadProductRatings = async (products) => {
                 const reviews = response.data.data || []
                 if (reviews.length > 0) {
                     const total = reviews.reduce((sum, review) => sum + (review.rating || 0), 0)
-                    const average = (total / reviews.length).toFixed(1)
+                    const average = (total / reviews.length).toFixed(1) //giữ 1 số thập phân
                     productRatingsMap.value[productId] = {
                         average: parseFloat(average),
                         count: reviews.length
@@ -226,7 +226,7 @@ const handleImageError = (event) => {
 
 // Lấy rating trung bình của sản phẩm
 const getProductRating = (product) => {
-    const productId = product.product_id || product.id
+    const productId = product.product_id 
     const rating = productRatings.value[productId]
     if (rating && rating.average > 0) {
         return parseFloat(rating.average)

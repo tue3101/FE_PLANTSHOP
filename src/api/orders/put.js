@@ -32,3 +32,14 @@ export const updateOrderShippingStatus = async (orderId, token, shippingStatus) 
     });
     return response;
 }
+
+// Cập nhật thông tin giao hàng (shipping_name, shipping_address, shipping_phone)
+export const updateOrderShippingInfo = async (orderId, token, shippingInfo) => {
+    const response = await axios.put(`/api/orders/${orderId}/shipping-info`, shippingInfo, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+    });
+    return response;
+}

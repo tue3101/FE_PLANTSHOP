@@ -59,7 +59,7 @@ const handleUpdate = async (credentials) => {
         {
             defaultErrorMessage: 'Cập nhật thông tin thất bại!',
             onError: (error) => {
-            updateError.value = error.response?.data?.message
+            Error.value = error.response?.data?.message
         }
         }
     )

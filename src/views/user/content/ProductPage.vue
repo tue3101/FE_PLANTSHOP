@@ -63,9 +63,9 @@ import { useProductStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
-import ProductList from '@/components/product/ProductList.vue'
 import DataPager from '@/components/common/DataPager.vue'
 import { useRouter } from 'vue-router'
+import ProductList from '@/components/common/user/product/ProductList.vue'
 
 const route = useRoute()
 const router = useRouter()

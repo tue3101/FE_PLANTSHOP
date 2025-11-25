@@ -104,13 +104,44 @@
                                     </p>
                                 </div>
                                 <button @click="removeDiscount"
-                                    class="text-red-600 text-sm hover:text-red-700 hover:underline font-medium">
+                                    class="text-red-600 text-sm hover:text-red-700 hover:underline font-medium cursor-pointer">
                                     Xóa mã giảm giá
                                 </button>
                             </div>
 
-                            <div class="mt-3 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                            <!-- Hiển thị các mã giảm giá có thể áp dụng -->
+                            <div v-if="availableDiscountCodes.length > 0" class="mt-4">
+                                <p class="text-sm font-semibold text-gray-700 mb-2">Mã giảm giá có thể áp dụng:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button v-for="discount in availableDiscountCodes" :key="discount.code"
+                                        @click="applyAvailableDiscount(discount)" :class="[
+                                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border',
+                                            appliedSpecialDiscount?.code === discount.code
+                                                ? 'bg-green-600 text-white border-green-700'
+                                                : 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300'
+                                        ]" :title="discount.description"
+                                        :disabled="appliedSpecialDiscount?.code === discount.code">
+                                        <span class="font-bold">{{ discount.code }}</span>
+                                        <span v-if="discount.type === 'percent'" class="ml-1">
+                                            - {{ discount.value }}%
+                                        </span>
+                                        <span v-else-if="discount.type === 'amount'" class="ml-1">
+                                            - {{ formatPrice(discount.value) }}
+                                        </span>
+                                        <span v-if="appliedSpecialDiscount?.code === discount.code" class="ml-1">
+                                            ✓
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 text-sm text-red-500 bg-gray-50 p-2 rounded">
                                 <p>💡 Không áp dụng đồng thời nhiều mã khuyến mãi!</p>
+                            </div>
+                            <!-- Error Message -->
+                            <div v-if="errorMessage"
+                                class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+                                {{ errorMessage }}
                             </div>
 
                             <!-- FreeShip info (tự động) -->
@@ -182,11 +213,7 @@
                             </div>
                         </div>
 
-                        <!-- Error Message -->
-                        <div v-if="errorMessage"
-                            class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
-                            {{ errorMessage }}
-                        </div>
+
 
                         <!-- Submit Button (chỉ hiển thị khi chưa tạo đơn hoặc COD) -->
                         <button v-if="!createdOrderId && paymentMethod !== 'MOMO'" @click="handleCreateOrder"
@@ -209,10 +236,6 @@
                     </div>
                 </div>
 
-                <!-- Payment MoMo Component (hiển thị sau khi tạo đơn với MOMO) -->
-                <div v-if="createdOrderId && paymentMethod === 'MOMO'" class="mt-6 w-full">
-                    <PaymentMoMo :orderId="createdOrderId" :amount="finalTotal" />
-                </div>
             </div>
         </div>
 
@@ -235,7 +258,6 @@ import { usePaymentMethodStore } from '@/stores/payment-methods'
 import { usePaymentStore } from '@/stores/payments'
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
 import BackButton from '@/components/common/user/BackButton.vue'
-import PaymentMoMo from '@/components/common/user/PaymentMoMo.vue'
 import ConfirmLeaveModal from '@/components/common/ConfirmLeaveModal.vue'
 import { ShoppingCart } from 'lucide-vue-next'
 
@@ -697,13 +719,9 @@ const shippingFee = computed(() => {
     }
 })
 
-// Giảm giá tự động theo số lượng sản phẩm
+// Giảm giá tự động theo số lượng sản phẩm - Đã tắt
 const autoDiscountPercent = computed(() => {
-    const quantity = totalQuantity.value
-    if (quantity >= 10) {
-        return 10
-    }
-    return 0
+    return 0 // Tắt auto discount
 })
 
 const applyDiscountCode = async () => {
@@ -818,6 +836,32 @@ const removeDiscount = () => {
     discountCode.value = ''
 }
 
+// Áp dụng mã giảm giá khi click vào mã có sẵn
+const applyAvailableDiscount = (discount) => {
+    // Nếu click vào mã đã được áp dụng, remove nó
+    if (appliedSpecialDiscount.value?.code === discount.code) {
+        removeDiscount()
+        return
+    }
+
+    // Kiểm tra nếu đã đủ điều kiện miễn phí vận chuyển tự động
+    if (totalQuantity.value >= 15 && subTotal.value >= 4000000) {
+        errorMessage.value = 'Đơn hàng của bạn đã được miễn phí vận chuyển, không thể áp dụng mã giảm giá khác!'
+        return
+    }
+
+    // Áp dụng mã giảm giá
+    appliedSpecialDiscount.value = {
+        code: discount.code,
+        type: discount.type,
+        value: discount.value,
+        discount_id: null // Mã hardcode không có discount_id
+    }
+    discountCode.value = discount.code
+    errorMessage.value = ''
+    console.log('✅ Applied discount code:', discount.code)
+}
+
 // Calculate prices
 const subTotal = computed(() => {
     return orderItems.value.reduce((sum, item) => {
@@ -857,6 +901,34 @@ const specialDiscountPercent = computed(() => {
         return Number(appliedSpecialDiscount.value.value) || 0
     }
     return null
+})
+
+// Kiểm tra các mã giảm giá có thể áp dụng dựa trên điều kiện
+const availableDiscountCodes = computed(() => {
+    const available = []
+    const total = subTotal.value
+
+    // Kiểm tra điều kiện COBALA100K: >= 1.500.000 VND
+    if (total >= 1500000) {
+        available.push({
+            code: 'COBALA100K',
+            type: 'amount',
+            value: 100000,
+            description: 'Giảm 100.000 VND cho đơn hàng từ 1.500.000 VND'
+        })
+    }
+
+    // Kiểm tra điều kiện XANH10: >= 500.000 VND
+    if (total >= 500000) {
+        available.push({
+            code: 'XANH10',
+            type: 'percent',
+            value: 10,
+            description: 'Giảm 10% cho đơn hàng từ 500.000 VND'
+        })
+    }
+
+    return available
 })
 
 // Phí ship sau khi áp dụng FREESHIP
@@ -943,6 +1015,46 @@ const handleCreateOrder = async () => {
             // Get payment method ID
             const paymentMethodId = getPaymentMethodId(paymentMethod.value)
 
+            // Lấy thông tin giao hàng từ sessionStorage
+            const shippingName = sessionStorage.getItem('shipping_name') || ''
+            const shippingAddress = sessionStorage.getItem('shipping_address') || ''
+            const shippingPhone = sessionStorage.getItem('shipping_phone') || ''
+
+            console.log('📦 PaymentPage - Shipping info from sessionStorage:', {
+                shipping_name: shippingName,
+                shipping_address: shippingAddress,
+                shipping_phone: shippingPhone,
+                has_shipping_name: !!shippingName,
+                has_shipping_address: !!shippingAddress,
+                has_shipping_phone: !!shippingPhone
+            })
+
+            // Nếu không có shipping info từ sessionStorage, thử lấy từ shippingInfo (nếu có)
+            let finalShippingName = shippingName || shippingInfo.value?.username || ''
+            let finalShippingAddress = shippingAddress || shippingInfo.value?.address || ''
+            let finalShippingPhone = shippingPhone || shippingInfo.value?.phone_number || ''
+
+            // Nếu vẫn không có, thử lấy từ userInfo
+            if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+                console.warn('⚠️ PaymentPage - Missing shipping info from sessionStorage, trying userInfo')
+                if (userStore.userInfo) {
+                    finalShippingName = finalShippingName || userStore.userInfo.username || ''
+                    finalShippingAddress = finalShippingAddress || userStore.userInfo.address || ''
+                    finalShippingPhone = finalShippingPhone || userStore.userInfo.phone_number || ''
+                }
+            }
+
+            // Validate: Đảm bảo có đủ thông tin shipping trước khi tạo order
+            if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+                throw new Error('Thiếu thông tin giao hàng. Vui lòng quay lại trang xác nhận thông tin giao hàng!')
+            }
+
+            console.log('✅ PaymentPage - Final shipping info to send:', {
+                shipping_name: finalShippingName,
+                shipping_address: finalShippingAddress,
+                shipping_phone: finalShippingPhone
+            })
+
             // Prepare order data (KHÔNG gửi payment object vì backend có thể tự động tạo payment từ đó)
             // Payment sẽ được tạo riêng sau khi tạo đơn thành công
             const orderData = {
@@ -955,6 +1067,9 @@ const handleCreateOrder = async () => {
                 discount_amount: specialDiscountAmount.value,
                 total_discount_amount: totalDiscountAmount.value,
                 final_total: finalTotal.value,
+                shipping_name: finalShippingName,
+                shipping_address: finalShippingAddress,
+                shipping_phone: finalShippingPhone,
                 payment: {
                     method_id: paymentMethodId,
                     amount: finalTotal.value,
@@ -963,9 +1078,20 @@ const handleCreateOrder = async () => {
                 items: items
             }
 
-            console.log('Sending order data:', orderData)
+            // Log chi tiết để debug
+            console.log('📤 PaymentPage - Sending order data to API:', JSON.stringify(orderData, null, 2))
+            console.log('📤 PaymentPage - Shipping fields in orderData:', {
+                shipping_name: orderData.shipping_name,
+                shipping_address: orderData.shipping_address,
+                shipping_phone: orderData.shipping_phone,
+                has_shipping_name: !!orderData.shipping_name,
+                has_shipping_address: !!orderData.shipping_address,
+                has_shipping_phone: !!orderData.shipping_phone
+            })
 
             const response = await orderStore.createNewOrder(orderData)
+
+            console.log('📥 PaymentPage - Order creation response:', response?.data)
 
             console.log('Order creation response:', response.data)
 
@@ -988,6 +1114,11 @@ const handleCreateOrder = async () => {
                 sessionStorage.setItem('completed_order_id', orderId.toString())
 
                 console.log('Order created successfully, orderId:', orderId)
+
+                // Xóa shipping info từ sessionStorage sau khi tạo order thành công
+                sessionStorage.removeItem('shipping_name')
+                sessionStorage.removeItem('shipping_address')
+                sessionStorage.removeItem('shipping_phone')
 
                 // Nếu thanh toán MOMO, lưu orderId và hiển thị QR code
                 if (paymentMethod.value === 'MOMO') {
@@ -1032,7 +1163,37 @@ const handleCancel = () => {
 }
 
 // Tạo đơn hàng cho MOMO (giống handleCreateOrder nhưng không redirect)
+const initiateMoMoPayment = async (orderId) => {
+    try {
+        const paymentResponse = await paymentStore.createMoMoPaymentStore({
+            orderId,
+            amount: finalTotal.value,
+            orderInfo: `Thanh toán đơn hàng #${orderId}`
+        })
+
+        const responseData = paymentResponse?.data || paymentResponse
+        const paymentPayload = responseData?.data || responseData
+        const payUrl = paymentPayload?.payUrl || paymentPayload?.pay_url
+
+        if (payUrl) {
+            sessionStorage.setItem('momo_payment_order_id', orderId.toString())
+            sessionStorage.setItem('momo_payment_timestamp', Date.now().toString())
+            window.location.href = payUrl
+        } else {
+            console.warn('Không tìm thấy payUrl trong dữ liệu thanh toán:', paymentPayload)
+            errorMessage.value = 'Không tìm thấy link thanh toán MoMo.'
+        }
+    } catch (error) {
+        console.error('Lỗi khi chuyển đến trang thanh toán MoMo:', error)
+        errorMessage.value = error.response?.data?.message || error.message || 'Không thể mở trang thanh toán MoMo.'
+    }
+}
+
 const handleCreateOrderForMoMo = async () => {
     await handleCreateOrder()
+
+    if (createdOrderId.value) {
+        await initiateMoMoPayment(createdOrderId.value)
+    }
 }
 </script>

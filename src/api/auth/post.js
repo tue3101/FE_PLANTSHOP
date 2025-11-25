@@ -37,21 +37,15 @@ export const sendOtp = async (username, email, password) => {
 
 // Xác thực OTP (optional)
 export const verifyOtp = async (email, otpCode) => {
-  // Không gửi token vì đây là bước xác thực trước khi đăng ký
-  const response = await axios.post("/api/auth/verify-otp", { email, otpCode }, {
-    _skipAuth: true
-  })
+  const response = await axios.post("/api/auth/verify-otp", { email, otpCode })
   return response
 }
 
 
 export const loginUser = async (email, password) => {
-  // Không gửi token vì đây là đăng nhập, user chưa có token
   const response = await axios.post("/api/auth/login", {
     email,
     password,
-  }, {
-    _skipAuth: true
   })
   return response
 }

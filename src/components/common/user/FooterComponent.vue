@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Instagram } from 'lucide-vue-next';
-import { Phone,Mail,MapIcon,Facebook,Youtube, Twitter } from 'lucide-vue-next';
+import { Phone,Mail,MapIcon,Facebook,Youtube} from 'lucide-vue-next';
 
 
 </script>

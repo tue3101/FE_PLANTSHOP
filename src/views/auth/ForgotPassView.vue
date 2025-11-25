@@ -8,7 +8,7 @@
             <div class="flex-1 bg-white p-6 relative">
                 <h2 class="text-black text-xl font-bold mb-4 text-center">QUÊN MẬT KHẨU</h2>
 
-                <!-- Bước 1: Nhập email và gửi OTP -->
+                <!-- Nhập email và gửi OTP -->
                 <div v-if="!otpSent" class="flex flex-col gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -28,7 +28,7 @@
                     </div>
                 </div>
 
-                <!-- Bước 2: Nhập OTP để xác nhận -->
+                <!-- Nhập OTP để xác nhận -->
                 <div v-else-if="!otpVerified" class="flex flex-col gap-4">
                     <div>
                         <p class="text-sm text-gray-600 mb-4">
@@ -59,7 +59,7 @@
                     </button>
                 </div>
 
-                <!-- Bước 3: Đặt lại mật khẩu mới -->
+                <!-- Đặt lại mật khẩu mới -->
                 <div v-else class="flex flex-col gap-4">
                     <div>
                         <p class="text-sm text-gray-600 mb-4">
@@ -87,17 +87,14 @@
                     </button>
                 </div>
 
-                <!-- Thông báo thành công -->
                 <div v-if="successMessage" class="text-green-600 text-sm text-center mt-4">
                     {{ successMessage }}
                 </div>
 
-                <!-- Thông báo lỗi -->
                 <div v-if="errorMessage" class="text-red-600 text-sm text-center mt-2">
                     {{ errorMessage }}
                 </div>
 
-                <!-- Loading state -->
                 <div v-if="isLoading" class="text-center py-4">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                 </div>
@@ -168,7 +165,7 @@ const handleSendOtp = async () => {
         if (response?.data?.success) {
             otpSent.value = true
             successMessage.value = 'Đã gửi mã OTP đến email của bạn!'
-            countdown.value = 60
+            countdown.value = 30
             startCountdown()
 
             // Focus vào input OTP

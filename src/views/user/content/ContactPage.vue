@@ -100,5 +100,5 @@
 
 <script setup>
 import { Youtube } from 'lucide-vue-next';
-import { MapPin, Phone, Mail, Clock, Users, Facebook, Twitter, Instagram } from 'lucide-vue-next'
+import { MapPin, Phone, Mail, Clock, Users, Facebook, Instagram } from 'lucide-vue-next'
 </script>

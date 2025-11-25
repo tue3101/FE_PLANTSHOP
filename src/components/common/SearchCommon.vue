@@ -6,8 +6,8 @@
                 @input="handleInput" @keyup.enter="handleEnter" />
         </div>
 
-        <!-- Category Dropdown (chỉ cho user search) -->
-        <div v-if="showCategoryFilter && mode === 'user'" class="mt-2">
+        <!-- Category Dropdown -->
+        <!-- <div v-if="showCategoryFilter && mode === 'user'" class="mt-2">
             <select v-model="selectedCategory"
                 class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer text-sm"
                 @change="handleCategoryChange">
@@ -17,12 +17,12 @@
                     {{ category.category_name || category.name }}
                 </option>
             </select>
-        </div>
+        </div> -->
 
-        <!-- Search Suggestions (chỉ cho user search) -->
+        <!-- Search Suggestions  -->
         <div v-if="showSuggestions && mode === 'user' && suggestions.length > 0 && modelValue.trim()"
             class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-            <div v-for="suggestion in suggestions" :key="suggestion.product_id || suggestion.id"
+            <div v-for="suggestion in suggestions" :key="suggestion.product_id"
                 @click.stop="selectSuggestion(suggestion)"
                 class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3">
                 <img :src="getProductImage(suggestion)" :alt="getProductName(suggestion)"
@@ -86,7 +86,7 @@ const productStore = useProductStore()
 const selectedCategory = ref(props.initialCategory || '')
 const suggestions = ref([])
 
-// Computed input class - sử dụng header style nếu được yêu cầu
+// Computed input class
 const computedInputClass = computed(() => {
     if (props.useHeaderStyle) {
         return 'w-full pl-10 pr-4 py-2 bg-amber-50 border border-black rounded-full focus:outline-none focus:ring-1 focus:ring-white'
@@ -106,9 +106,9 @@ const loadCategories = async () => {
 }
 
 // Computed categories
-const categories = computed(() => {
-    return productStore.categories || []
-})
+// const categories = computed(() => {
+//     return productStore.categories || []
+// })
 
 // Computed products for suggestions
 const products = computed(() => {
@@ -151,7 +151,7 @@ const updateSuggestions = () => {
     })
 
     // Limit to 5 suggestions
-    suggestions.value = filtered.slice(0, 5)
+    suggestions.value = filtered.slice(0, 8)
 }
 
 // Handle search (chỉ cho user mode)
@@ -181,17 +181,17 @@ const handleSearch = () => {
 }
 
 // Handle category change
-const handleCategoryChange = () => {
-    emit('category-change', selectedCategory.value)
-    // If category is selected, navigate immediately (chỉ cho user mode)
-    if (props.mode === 'user' && selectedCategory.value) {
-        handleSearch()
-    }
-}
+// const handleCategoryChange = () => {
+//     emit('category-change', selectedCategory.value)
+//     // If category is selected, navigate immediately (chỉ cho user mode)
+//     if (props.mode === 'user' && selectedCategory.value) {
+//         handleSearch()
+//     }
+// }
 
 // Select suggestion
 const selectSuggestion = (product) => {
-    const productId = product.product_id || product.id
+    const productId = product.product_id
     if (!productId) {
         console.error('Product ID not found:', product)
         return

@@ -13,6 +13,26 @@
                 </div>
 
             </div>
+
+            <!-- Shipping Information -->
+            <div class="bg-gray-50 rounded-lg p-4 mt-3 space-y-2">
+                <h4 class="font-semibold text-gray-800 mb-2">Thông tin giao hàng:</h4>
+                <div class="space-y-1 text-sm">
+                    <div class="flex items-start gap-2">
+                        <span class="font-medium text-gray-700 min-w-[100px]">Tên người nhận:</span>
+                        <span class="text-gray-900">{{ getShippingUsername() }}</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="font-medium text-gray-700 min-w-[100px]">Số điện thoại:</span>
+                        <span class="text-gray-900">{{ getShippingPhone() }}</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="font-medium text-gray-700 min-w-[100px]">Địa chỉ:</span>
+                        <span class="text-gray-900">{{ getShippingAddress() }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex items-center justify-between">
                 <span class="text-sm text-gray-600">Trạng thái đơn hàng:</span>
                 <span :class="[
@@ -104,13 +124,14 @@
                 Hủy đơn hàng
             </button>
             <!-- Review Button (only for DELIVERED orders) -->
-            <router-link v-if="order.status === 'DELIVERED' && !hasAllProductsReviewed"
+            <router-link v-if="order.shipping_status === 'DELIVERED' && !hasAllProductsReviewed"
                 :to="`/review/${order.order_id}`"
                 class="px-4 py-1.5 text-sm rounded-lg font-medium bg-green-600 hover:bg-green-700 text-white transition-colors cursor-pointer">
                 Đánh giá sản phẩm
             </router-link>
             <!-- View Review Button (if all products are reviewed) -->
-            <router-link v-if="order.status === 'DELIVERED' && hasAllProductsReviewed" :to="`/review/${order.order_id}`"
+            <router-link v-if="order.shipping_status === 'DELIVERED' && hasAllProductsReviewed"
+                :to="`/review/${order.order_id}`"
                 class="px-4 py-1.5 text-sm rounded-lg font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer">
                 Xem đánh giá
             </router-link>
@@ -123,6 +144,7 @@ import { defineProps, computed, onMounted, watch, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useReviewStore } from '@/stores/reviews'
 import { usePaymentStore } from '@/stores/payments'
+import { useOrderStore } from '@/stores/orders'
 
 const props = defineProps({
     order: {
@@ -145,9 +167,12 @@ defineEmits(['cancel-order'])
 const authStore = useAuthStore()
 const reviewStore = useReviewStore()
 const paymentStore = usePaymentStore()
+const orderStore = useOrderStore()
 const userReviews = ref([])
 const isLoadingReviews = ref(false)
 const paymentInfo = ref(null)
+const fullOrderInfo = ref(null)
+const isLoadingOrderInfo = ref(false)
 
 // Kiểm tra xem có nên hiển thị đơn hàng này không
 // Chỉ áp dụng filter khi applyFilter = true (dùng trong OrderPage)
@@ -173,7 +198,7 @@ const shouldDisplayOrder = computed(() => {
 // Load user reviews to check if all products are reviewed
 const loadUserReviews = async () => {
     const userId = authStore.userId
-    if (!userId || props.order.status !== 'DELIVERED') return
+    if (!userId || props.order.shipping_status !== 'DELIVERED') return
 
     isLoadingReviews.value = true
     try {
@@ -215,17 +240,85 @@ const hasAllProductsReviewed = computed(() => {
 
 // Watch order changes to reload reviews
 watch(() => props.order.order_id, () => {
-    if (props.order.status === 'DELIVERED') {
+    if (props.order.shipping_status === 'DELIVERED') {
         loadUserReviews()
     }
 }, { immediate: true })
 
+// Load full order info nếu thiếu thông tin shipping
+const loadFullOrderInfo = async () => {
+    // Kiểm tra xem đã có đủ thông tin shipping chưa
+    const hasShippingInfo = props.order.shipping_username ||
+        props.order.shipping_phone ||
+        props.order.shipping_address ||
+        props.order.user?.username ||
+        props.order.user?.phone_number ||
+        props.order.user?.address
+
+    if (hasShippingInfo) {
+        console.log('✅ OrderCard - Order already has shipping info, no need to load')
+        return // Đã có thông tin, không cần load
+    }
+
+    if (isLoadingOrderInfo.value || fullOrderInfo.value) {
+        return // Đang load hoặc đã load rồi
+    }
+
+    // Lưu ý: API getOrderById không trả về thông tin shipping (shipping_username, shipping_phone, shipping_address)
+    // và user có thể là null, nên việc gọi API này không giúp gì
+    // Thay vào đó, thử load user info từ userStore nếu có userId
+    console.log('⚠️ OrderCard - Missing shipping info for order:', props.order.order_id)
+    console.log('⚠️ Note: API /api/orders/{id} does not return shipping info, trying to load from user info instead')
+
+    // Nếu có user_id, thử load user info
+    if (props.order.user_id && authStore.accessToken) {
+        try {
+            const { useUserStore } = await import('@/stores/user')
+            const userStore = useUserStore()
+            await userStore.getInfo(authStore.accessToken)
+            if (userStore.userInfo && userStore.userInfo.user_id === props.order.user_id) {
+                // Tạo fullOrderInfo từ user info
+                fullOrderInfo.value = {
+                    ...props.order,
+                    user: userStore.userInfo
+                }
+                console.log('✅ OrderCard - Loaded user info for shipping:', {
+                    username: userStore.userInfo.username,
+                    phone_number: userStore.userInfo.phone_number,
+                    address: userStore.userInfo.address
+                })
+                return
+            }
+        } catch (error) {
+            console.error('❌ OrderCard - Error loading user info:', error)
+        }
+    }
+
+    // Nếu không load được user info, không gọi API getOrderById vì nó không có thông tin shipping
+    console.warn('⚠️ OrderCard - Cannot load shipping info. API does not return shipping fields.')
+}
+
 onMounted(() => {
-    if (props.order.status === 'DELIVERED') {
+    // Debug: Log order object để kiểm tra dữ liệu
+    console.log('📦 OrderCard - Order object received:', {
+        order_id: props.order.order_id,
+        has_payment: !!props.order.payment,
+        payment: props.order.payment,
+        has_user: !!props.order.user,
+        user: props.order.user,
+        shipping_username: props.order.shipping_username,
+        shipping_phone: props.order.shipping_phone,
+        shipping_address: props.order.shipping_address,
+        full_order: props.order
+    })
+
+    if (props.order.shipping_status === 'DELIVERED') {
         loadUserReviews()
     }
     // Load payment info nếu chưa có
     loadPaymentInfo()
+    // Load full order info nếu thiếu thông tin shipping
+    loadFullOrderInfo()
 })
 
 // Tính tổng số lượng sản phẩm
@@ -360,7 +453,7 @@ const getPaymentStatusClass = (status) => {
     if (!status) return 'bg-gray-100 text-gray-800'
 
     const classMap = {
-    
+
         'PROCESSING': 'bg-yellow-100 text-yellow-800',
         'FAILED': 'bg-red-100 text-red-800',
         'SUCCESS': 'bg-green-100 text-green-800',
@@ -371,11 +464,21 @@ const getPaymentStatusClass = (status) => {
 
 // Lấy tên phương thức thanh toán từ order
 const getPaymentMethodName = () => {
+    // Ưu tiên lấy từ order.payment (đã được load từ getOrdersByUserIdStore)
+    if (props.order.payment?.method?.name) {
+        return props.order.payment.method.name
+    }
+    if (props.order.payment?.method_name) {
+        return props.order.payment.method_name
+    }
+    if (props.order.payment_method) {
+        return props.order.payment_method
+    }
+    // Fallback về paymentInfo nếu có
     if (paymentInfo.value?.method_name) {
         return paymentInfo.value.method_name
     }
-
-
+    return 'COD' // Default
 }
 
 // Lấy trạng thái thanh toán
@@ -419,8 +522,18 @@ const getShippingStatusText = (shippingStatus) => {
 
 // Load payment info nếu chưa có trong order
 const loadPaymentInfo = async () => {
+    // Ưu tiên sử dụng payment info từ order object (đã được load từ getOrdersByUserIdStore)
+    if (props.order.payment) {
+        paymentInfo.value = props.order.payment
+        console.log('✅ Using payment info from order object:', paymentInfo.value)
+        return
+    }
+
+    // Nếu đã load paymentInfo rồi thì không load lại
     if (paymentInfo.value) return
 
+    // Chỉ load từ API nếu order không có payment info
+    console.log('⚠️ Order does not have payment info, loading from API for order:', props.order.order_id)
     try {
         const paymentResponse = await paymentStore.getPaymentByOrderIdStore(props.order.order_id)
         if (paymentResponse?.data?.success && paymentResponse?.data?.data) {
@@ -433,10 +546,10 @@ const loadPaymentInfo = async () => {
                 // Nếu là object, dùng trực tiếp
                 paymentInfo.value = data
             }
-            console.log('Loaded payment info:', paymentInfo.value)
+            console.log('✅ Loaded payment info from API:', paymentInfo.value)
         }
     } catch (error) {
-        console.error('Error loading payment info:', error)
+        console.error('❌ Error loading payment info:', error)
     }
 }
 
@@ -456,5 +569,25 @@ const handleImageError = (event) => {
     if (!event.target.src.includes('footer.png')) {
         event.target.src = '/img/footer.png'
     }
+}
+
+// Lấy thông tin giao hàng từ order prop (đã được load từ getOrdersByUserIdStore)
+// Sử dụng fullOrderInfo nếu đã load, nếu không thì dùng props.order
+const getShippingUsername = () => {
+    const order = fullOrderInfo.value || props.order
+    const username = order.shipping_name 
+    return username
+}
+
+const getShippingPhone = () => {
+    const order = fullOrderInfo.value || props.order
+    const phone = order.shipping_phone 
+    return phone
+}
+
+const getShippingAddress = () => {
+    const order = fullOrderInfo.value || props.order
+    const address = order.shipping_address 
+    return address
 }
 </script>

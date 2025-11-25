@@ -43,6 +43,16 @@
                 </select>
             </div>
 
+            <div v-if="showShippingStatusFilter" class="sm:w-48">
+                <select v-model="selectedShippingStatusProxy"
+                    class="w-50 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent">
+                    <option value="">Trạng thái giao hàng</option>
+                    <option v-for="shipping_status in shippingStatusOption"
+                        :key="shipping_status[shippingstatusValueKey]" :value="shipping_status[shippingstatusValueKey]">
+                        {{ shipping_status[statusLabelKey] }}
+                    </option>
+                </select>
+            </div>
             <div v-if="showStatusFilter" class="sm:w-48">
                 <select v-model="selectedStatusProxy"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent">
@@ -117,6 +127,7 @@ const props = defineProps({
     sortOption: { type: String, default: '' },
     selectedActive: { type: String, default: '' },
     selectedStatus: { type: String, default: '' },
+    selectedShippingStatus: { type: String, default: '' },
     selectedDeleted: { type: String, default: '' },
 
     // Accessors cho các trường 
@@ -143,18 +154,21 @@ const props = defineProps({
     showSortOption: { type: Boolean, default: false },
     showStatusFilter: { type: Boolean, default: false },
     showDeletedFilter: { type: Boolean, default: false },
+    showShippingStatusFilter: { type: Boolean, default: false },
 
     categoryOptions: { type: Array, default: () => [] },
     categoryIdKey: { type: String, default: 'category_id' },
     categoryLabelKey: { type: String, default: 'category_name' },
     statusOptions: { type: Array, default: () => [] },
+    shippingStatusOption: { type: Array, default: () => [] },
     statusValueKey: { type: String, default: 'value' },
+    shippingstatusValueKey: { type: String, default: 'value' },
     statusLabelKey: { type: String, default: 'label' },
-    useProductLabels: { type: Boolean, default: false }, // Chỉ dùng cho ProductView
+    useProductLabels: { type: Boolean, default: false },
     controlsClass: { type: String, default: '' },
 })
 
-const emit = defineEmits(['update:modelValue', 'update:selectedCategory', 'update:sortOption', 'update:selectedActive', 'update:selectedStatus', 'update:selectedDeleted'])
+const emit = defineEmits(['update:modelValue', 'update:selectedCategory', 'update:sortOption', 'update:selectedActive', 'update:selectedStatus', 'update:selectedShippingStatus', 'update:selectedDeleted'])
 const route = useRoute()
 const router = useRouter()
 
@@ -178,6 +192,19 @@ const filteredItems = computed(() => {
 
     if (props.selectedStatus) {
         result = result.filter((p) => p.status === props.selectedStatus)
+    }
+
+    if (props.selectedShippingStatus) {
+        if (props.selectedShippingStatus === 'NOT_DELIVERED') {
+            // Gộp các trạng thái chưa giao: UNDELIVERED, PREPARING_ORDER, SHIPPING
+            result = result.filter((p) =>
+                p.shipping_status === 'UNDELIVERED' ||
+                p.shipping_status === 'PREPARING_ORDER' ||
+                p.shipping_status === 'SHIPPING'
+            )
+        } else {
+            result = result.filter((p) => p.shipping_status === props.selectedShippingStatus)
+        }
     }
 
     const q = String(props.searchQuery || '').toLowerCase().trim()
@@ -257,7 +284,7 @@ function goTo(p) {
 
 
 // Reset trang về 1 khi thay đổi bộ lọc/tìm kiếm
-watch(() => [props.sortOption, props.selectedActive, props.searchQuery, props.selectedStatus, props.selectedDeleted], () => {
+watch(() => [props.sortOption, props.selectedActive, props.searchQuery, props.selectedStatus, props.selectedShippingStatus, props.selectedDeleted], () => {
     currentPageComputed.value = 1
 })
 
@@ -298,6 +325,10 @@ const selectedActiveProxy = computed({
 const selectedStatusProxy = computed({
     get: () => props.selectedStatus,
     set: (v) => emit('update:selectedStatus', v),
+})
+const selectedShippingStatusProxy = computed({
+    get: () => props.selectedShippingStatus,
+    set: (v) => emit('update:selectedShippingStatus', v),
 })
 
 const selectedDeletedProxy = computed({

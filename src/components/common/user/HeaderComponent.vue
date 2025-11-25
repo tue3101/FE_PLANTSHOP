@@ -18,14 +18,14 @@
 
       <div class="flex items-center space-x-4 relative">
         <!-- Not Logged In -->
-        <router-link v-if="!authStore.isAuthenticated" to="/login"
+        <!-- <router-link v-if="!authStore.isAuthenticated" to="/login"
           class="cursor-pointer hover:opacity-80 flex items-center gap-2">
           <User class="w-5 h-5" />
           <span>Login</span>
-        </router-link>
+        </router-link> -->
 
         <!-- Logged In - User Menu -->
-        <div v-else class="relative z-[100]">
+        <div class="relative z-[100]">
           <button @click="toggleUserMenu" class="cursor-pointer hover:opacity-80 flex items-center gap-2">
             <User class="w-5 h-5" />
             <span>{{ getUsername() }}</span>
@@ -53,13 +53,11 @@
     </div>
 
     <!-- Bottom Navigation -->
-    <div class="px-15 bg-white h-20 border-b relative z-50">
+    <div class="px-10 bg-white h-20 border-b relative z-50">
       <div class="flex justify-between items-center h-20">
         <div class="flex items-center h-full">
-          <div
-            class="w-17 h-17 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center p-1.5 cursor-pointer">
-            <RouterLink to="/"><img src="/img/cobala.png" alt="Cỏ ba lá"
-                class="w-full h-full w-auto h-auto object-contain" /></RouterLink>
+          <div class="w-50 h-15  cursor-pointer">
+            <RouterLink to="/"><img src="/img/logo.png" alt="Cỏ ba lá" class="w-full h-full" /></RouterLink>
           </div>
         </div>
         <div class="flex items-center flex-nowrap relative z-50">
@@ -79,24 +77,24 @@
               <div v-if="showCategoryMenu && categories.length > 0" @mouseenter="handleCategoryMenuEnter"
                 @mouseleave="handleCategoryMenuLeave"
                 class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]">
-                <div v-for="category in categories" :key="category.category_id || category.id" class="relative group">
-                  <router-link :to="`/product?category=${category.category_id || category.id}`"
+                <div v-for="category in categories" :key="category.category_id" class="relative group">
+                  <router-link :to="`/product?category=${category.category_id}`"
                     class="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     @click="showCategoryMenu = false">
-                    <span>{{ category.category_name || category.name }}</span>
-                    <ChevronRight v-if="category.subcategories && category.subcategories.length > 0"
-                      class="w-4 h-4 text-gray-400" />
+                    <span>{{ category.category_name }}</span>
+                    <!-- <ChevronRight v-if="category.subcategories && category.subcategories.length > 0"
+                      class="w-4 h-4 text-gray-400" /> -->
                   </router-link>
 
-                  <!-- Submenu (nếu có) -->
-                  <div v-if="category.subcategories && category.subcategories.length > 0"
+                  <!-- Submenu  -->
+                  <!-- <div v-if="category.subcategories && category.subcategories.length > 0"
                     class="absolute left-full top-0 ml-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
                     <router-link v-for="sub in category.subcategories" :key="sub.category_id || sub.id"
                       :to="`/product?category=${sub.category_id || sub.id}`"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                       {{ sub.category_name || sub.name }}
                     </router-link>
-                  </div>
+                  </div> -->
                 </div>
               </div>
               <!-- Empty state nếu chưa có categories -->
@@ -117,28 +115,28 @@
 
 
         <div class="flex-1 max-w-md mx-8">
-          <ProductSearch v-model="searchQuery" mode="user" :show-category-filter="false" :show-suggestions="true" />
+          <SearchCommon v-model="searchQuery" mode="user" :show-category-filter="false" :show-suggestions="true" />
         </div>
 
-        <div class="flex items-center space-x-4">
-          <!-- Cart -->
-          <div class="relative cart-icon-container" @click="handleCartClick">
-            <ShoppingCart class="w-10 h-10 text-green-700 hover:text-green-500 cursor-pointer" />
-            <span v-if="cartItemsCount > 0"
-              class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold">
-              {{ cartItemsCount > 99 ? '99+' : cartItemsCount }}
-            </span>
-          </div>
 
+        <!-- Cart -->
+        <div class="relative cart-icon-container" @click="handleCartClick">
+          <ShoppingCart class="w-10 h-10 text-green-700 hover:text-green-500 cursor-pointer" />
+          <span v-if="cartItemsCount > 0"
+            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold">
+            {{ cartItemsCount > 99 ? '99+' : cartItemsCount }}
+          </span>
         </div>
+
+
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import { Phone, ShoppingCart, Clock, Menu, ChevronRight } from "lucide-vue-next"
-import ProductSearch from "../SearchCommon.vue"
+import { Phone, ShoppingCart, Clock, Menu } from "lucide-vue-next"
+import SearchCommon from "../SearchCommon.vue"
 import { useRouter, useRoute } from "vue-router"
 import { computed, ref, onMounted, watch } from "vue"
 import { User } from "lucide-vue-next"
@@ -223,7 +221,7 @@ const toggleCategoryMenu = () => {
   }
 }
 
-// Handle mouse enter/leave cho category menu
+// để ngăn menu danh mục đóng khi trỏ chuột vào
 let leaveTimeout = null
 const handleCategoryMenuEnter = () => {
   if (leaveTimeout) {

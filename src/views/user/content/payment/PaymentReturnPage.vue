@@ -143,6 +143,23 @@ const updatePaymentStatus = async () => {
     }
 }
 
+// Cập nhật trạng thái đơn hàng thành CONFIRMED sau khi thanh toán thành công
+const confirmOrderStatus = async () => {
+    try {
+        if (!orderId.value) return
+
+        const orderResponse = await orderStore.getOrderByIdStore(orderId.value)
+        if (orderResponse?.data?.success && orderResponse?.data?.data) {
+            const currentStatus = orderResponse.data.data.status
+            if (currentStatus !== 'CONFIRMED') {
+                await orderStore.updateOrderStatusStore(orderId.value, 'CONFIRMED')
+            }
+        }
+    } catch (error) {
+        console.error('Error confirming order status after payment:', error)
+    }
+}
+
 onMounted(async () => {
     // Lấy query params từ URL (MoMo sẽ redirect về với các params này)
     const orderIdParam = route.query.orderId
@@ -193,6 +210,7 @@ onMounted(async () => {
         // Thanh toán thành công - cập nhật payment status
         if (orderId.value) {
             await updatePaymentStatus()
+            await confirmOrderStatus()
         }
 
         // Xóa flags MoMo payment sau khi thanh toán thành công

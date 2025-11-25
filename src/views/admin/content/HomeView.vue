@@ -30,17 +30,11 @@
           <label for="viewType" class="text-sm font-medium text-gray-700">Xem theo:</label>
           <select id="viewType" v-model="viewType" @change="onViewTypeChange"
             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option value="day">Theo Ngày</option>
             <option value="month">Theo Tháng</option>
             <option value="year">Theo Năm</option>
           </select>
         </div>
-        <div v-if="viewType === 'day'" class="flex items-center gap-2">
-          <label for="datePicker" class="text-sm font-medium text-gray-700">Chọn ngày:</label>
-          <input id="datePicker" type="date" v-model="selectedDate" @change="onDateChange"
-            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-        </div>
-        <div v-else-if="viewType === 'month'" class="flex items-center gap-2">
+        <div v-if="viewType === 'month'" class="flex items-center gap-2">
           <label for="monthPicker" class="text-sm font-medium text-gray-700">Chọn tháng:</label>
           <input id="monthPicker" type="month" v-model="selectedMonthYear" @change="onMonthYearChange"
             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
@@ -97,15 +91,13 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h2 class="text-lg font-semibold text-purple-800">
-                  {{ viewType === 'day' ? `Doanh Thu Ngày` :
-                    viewType === 'year' ? `Doanh Thu Năm` :
-                      `Doanh Thu Tháng` }}
+                  {{ viewType === 'year' ? `Doanh Thu Năm` :
+                    `Doanh Thu Tháng` }}
                 </h2>
 
                 <p class="text-sm text-purple-600 mt-1">
-                  {{ viewType === 'day' ? formatDate(selectedDate) :
-                    viewType === 'year' ? selectedYear :
-                      `${selectedMonth}/${selectedYear}` }}
+                  {{ viewType === 'year' ? selectedYear :
+                    `${selectedMonth}/${selectedYear}` }}
                 </p>
               </div>
 
@@ -127,15 +119,13 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h2 class="text-lg font-semibold text-red-800">
-                  {{ viewType === 'day' ? `Đơn Hàng Ngày` :
-                    viewType === 'year' ? `Đơn Hàng Năm` :
-                      `Đơn Hàng Tháng` }}
+                  {{ viewType === 'year' ? `Tổng Đơn Năm` :
+                    `Tổng Đơn Tháng` }}
                 </h2>
 
                 <p class="text-sm text-red-600 mt-1">
-                  {{ viewType === 'day' ? formatDate(selectedDate) :
-                    viewType === 'year' ? selectedYear :
-                      `${selectedMonth}/${selectedYear}` }}
+                  {{ viewType === 'year' ? selectedYear :
+                    `${selectedMonth}/${selectedYear}` }}
                 </p>
               </div>
 
@@ -152,15 +142,14 @@
         <div>
           <div>
             <h3 class="text-lg font-medium mb-2 text-center">
-              {{ viewType === 'day' ? 'Sơ Đồ Doanh Thu Theo Ngày' :
-                viewType === 'year' ? 'Sơ Đồ Doanh Thu Theo Năm' :
-                  'Sơ Đồ Doanh Thu' }}
+              {{ viewType === 'year' ? 'Sơ Đồ Doanh Thu Theo Năm' :
+                `Sơ Đồ Doanh Thu Theo Tháng (${selectedMonth}/${selectedYear})` }}
             </h3>
             <div class="h-[500px] w-[1100px]">
               <Bar v-if="barData" :data="barData" :options="barOptions" />
             </div>
           </div>
-          <div class="mt-10">
+          <!-- <div class="mt-10">
             <h3 class="text-lg font-medium mb-2 ">TOP 10 Sản Phẩm Bán Chạy</h3>
             <div class="h-[500px] w-[600px]  mx-auto">
               <Pie v-if="pieData"
@@ -170,7 +159,7 @@
                 Đang tải dữ liệu...
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -188,9 +177,11 @@ import {
   CategoryScale,
   LinearScale,
   ArcElement,
+  LineElement,
+  PointElement,
 } from "chart.js"
 import { Bar, Pie } from "vue-chartjs"
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement)
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, LineElement, PointElement)
 
 // Custom plugin để hiển thị phần trăm trong biểu đồ tròn (chỉ cho Pie chart)
 const percentagePlugin = {
@@ -238,15 +229,19 @@ const percentagePlugin = {
 const barRevenuePlugin = {
   id: 'barRevenuePlugin',
   afterDatasetsDraw(chart) {
-    // Chỉ áp dụng cho Bar chart
-    if (chart.config.type !== 'bar') return
+    // Chỉ áp dụng cho mixed chart (bar + line)
+    if (!chart.data.datasets || chart.data.datasets.length === 0) return
 
     const ctx = chart.ctx
-    const dataset = chart.data.datasets[0]
-    const meta = chart.getDatasetMeta(0)
+    // Tìm dataset bar (dataset đầu tiên)
+    const barDataset = chart.data.datasets.find(ds => ds.type === 'bar')
+    if (!barDataset) return
+
+    const barDatasetIndex = chart.data.datasets.findIndex(ds => ds.type === 'bar')
+    const meta = chart.getDatasetMeta(barDatasetIndex)
 
     meta.data.forEach((element, index) => {
-      const value = dataset.data[index]
+      const value = barDataset.data[index]
       if (value <= 0) return
 
       const { x, y } = element.tooltipPosition()
@@ -271,7 +266,7 @@ const barRevenuePlugin = {
 // Đăng ký plugins
 ChartJS.register(percentagePlugin, barRevenuePlugin)
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
-import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear, getTopProductsByDate, getTopProductsByMonth, getTopProductsByYear } from '@/api/statistics/get'
+import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear,  getTopProductsByMonth, getTopProductsByYear } from '@/api/statistics/get'
 import { getAllUser } from '@/api/user/get'
 import { getAllProducts } from '@/api/products/get'
 import { Users, Package, DollarSign, ShoppingCart } from "lucide-vue-next"
@@ -282,25 +277,25 @@ const { isLoading, errorMessage, resetError, executeAsync } = useAsyncOperation(
 const viewType = ref('month') // 'day', 'month' or 'year'
 const selectedYear = ref(new Date().getFullYear())
 const selectedMonth = ref(new Date().getMonth() + 1)
-const selectedDay = ref(new Date().getDate())
+// const selectedDay = ref(new Date().getDate())
 
 // Computed property for date picker (format: YYYY-MM-DD)
-const selectedDate = computed({
-  get() {
-    const year = selectedYear.value
-    const month = String(selectedMonth.value).padStart(2, '0')
-    const day = String(selectedDay.value).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  },
-  set(value) {
-    if (value) {
-      const [year, month, day] = value.split('-')
-      selectedYear.value = parseInt(year)
-      selectedMonth.value = parseInt(month)
-      selectedDay.value = parseInt(day)
-    }
-  }
-})
+// const selectedDate = computed({
+//   get() {
+//     const year = selectedYear.value
+//     const month = String(selectedMonth.value).padStart(2, '0')
+//     const day = String(selectedDay.value).padStart(2, '0')
+//     return `${year}-${month}-${day}`
+//   },
+//   set(value) {
+//     if (value) {
+//       const [year, month, day] = value.split('-')
+//       selectedYear.value = parseInt(year)
+//       selectedMonth.value = parseInt(month)
+//       selectedDay.value = parseInt(day)
+//     }
+//   }
+// })
 
 // Computed property for month-year picker (format: YYYY-MM)
 const selectedMonthYear = computed({
@@ -324,19 +319,19 @@ const onMonthYearChange = () => {
 }
 
 // Handle date picker change
-const onDateChange = () => {
-  loadStatistics()
-}
+// const onDateChange = () => {
+//   loadStatistics()
+// }
 
-// Format date for display
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-  return `${day}/${month}/${year}`
-}
+// // Format date for display
+// const formatDate = (dateString) => {
+//   if (!dateString) return ''
+//   const date = new Date(dateString)
+//   const day = String(date.getDate()).padStart(2, '0')
+//   const month = String(date.getMonth() + 1).padStart(2, '0')
+//   const year = date.getFullYear()
+//   return `${day}/${month}/${year}`
+// }
 
 // Statistics data
 const statistics = ref(null)
@@ -366,44 +361,44 @@ const formatCurrency = (amount) => {
 }
 
 // Generate colors for pie chart
-const generateColors = (count) => {
-  const colors = [
-    "rgba(255, 99, 132, 0.6)",
-    "rgba(54, 162, 235, 0.6)",
-    "rgba(255, 205, 86, 0.6)",
-    "rgba(75, 192, 192, 0.6)",
-    "rgba(153, 102, 255, 0.6)",
-    "rgba(255, 159, 64, 0.6)",
-    "rgba(199, 199, 199, 0.6)",
-    "rgba(83, 102, 255, 0.6)",
-    "rgba(255, 99, 255, 0.6)",
-    "rgba(99, 255, 132, 0.6)",
-  ]
-  const borderColors = [
-    "rgba(255, 99, 132, 1)",
-    "rgba(54, 162, 235, 1)",
-    "rgba(255, 205, 86, 1)",
-    "rgba(75, 192, 192, 1)",
-    "rgba(153, 102, 255, 1)",
-    "rgba(255, 159, 64, 1)",
-    "rgba(199, 199, 199, 1)",
-    "rgba(83, 102, 255, 1)",
-    "rgba(255, 99, 255, 1)",
-    "rgba(99, 255, 132, 1)",
-  ]
+// const generateColors = (count) => {
+//   const colors = [
+//     "rgba(255, 99, 132, 0.6)",
+//     "rgba(54, 162, 235, 0.6)",
+//     "rgba(255, 205, 86, 0.6)",
+//     "rgba(75, 192, 192, 0.6)",
+//     "rgba(153, 102, 255, 0.6)",
+//     "rgba(255, 159, 64, 0.6)",
+//     "rgba(199, 199, 199, 0.6)",
+//     "rgba(83, 102, 255, 0.6)",
+//     "rgba(255, 99, 255, 0.6)",
+//     "rgba(99, 255, 132, 0.6)",
+//   ]
+//   const borderColors = [
+//     "rgba(255, 99, 132, 1)",
+//     "rgba(54, 162, 235, 1)",
+//     "rgba(255, 205, 86, 1)",
+//     "rgba(75, 192, 192, 1)",
+//     "rgba(153, 102, 255, 1)",
+//     "rgba(255, 159, 64, 1)",
+//     "rgba(199, 199, 199, 1)",
+//     "rgba(83, 102, 255, 1)",
+//     "rgba(255, 99, 255, 1)",
+//     "rgba(99, 255, 132, 1)",
+//   ]
 
-  return {
-    background: colors.slice(0, count),
-    border: borderColors.slice(0, count)
-  }
-}
+//   return {
+//     background: colors.slice(0, count),
+//     border: borderColors.slice(0, count)
+//   }
+// }
 
 // Handle view type change
 const onViewTypeChange = () => {
   loadStatistics()
 }
 
-// Load daily data for bar chart when viewing by day
+// Load daily data for bar chart when viewing by month
 const dailyRevenueData = ref([])
 const loadDailyDataForMonth = async () => {
   dailyRevenueData.value = []
@@ -422,12 +417,13 @@ const loadDailyDataForMonth = async () => {
           if (response.data?.success && response.data?.data) {
             return {
               day,
-              revenue: response.data.data.totalRevenue || 0
+              revenue: response.data.data.totalRevenue || 0,
+              orders: response.data.data.totalOrders || 0
             }
           }
-          return { day, revenue: 0 }
+          return { day, revenue: 0, orders: 0 }
         })
-        .catch(() => ({ day, revenue: 0 }))
+        .catch(() => ({ day, revenue: 0, orders: 0 }))
     )
   }
 
@@ -438,22 +434,7 @@ const loadDailyDataForMonth = async () => {
 // Load statistics data
 const loadStatistics = async () => {
   await executeAsync(async () => {
-    if (viewType.value === 'day') {
-      // Load statistics by date
-      const statsResponse = await getStatisticsByDate(selectedYear.value, selectedMonth.value, selectedDay.value)
-      if (statsResponse.data?.success && statsResponse.data?.data) {
-        statistics.value = statsResponse.data.data
-      }
-
-      // Load top products by date
-      const topProductsResponse = await getTopProductsByDate(selectedYear.value, selectedMonth.value, selectedDay.value, 10)
-      if (topProductsResponse.data?.success && topProductsResponse.data?.data) {
-        topProducts.value = topProductsResponse.data.data
-      }
-
-      // Load daily data for bar chart
-      await loadDailyDataForMonth()
-    } else if (viewType.value === 'month') {
+    if (viewType.value === 'month') {
       // Load statistics by month
       const statsResponse = await getStatisticsByMonth(selectedYear.value, selectedMonth.value)
       if (statsResponse.data?.success && statsResponse.data?.data) {
@@ -465,6 +446,9 @@ const loadStatistics = async () => {
       if (topProductsResponse.data?.success && topProductsResponse.data?.data) {
         topProducts.value = topProductsResponse.data.data
       }
+
+      // Load daily data for bar chart (hiển thị theo ngày trong tháng)
+      await loadDailyDataForMonth()
     } else {
       // Load statistics by year
       const statsResponse = await getStatisticsByYear(selectedYear.value)
@@ -499,12 +483,13 @@ const loadMonthlyDataForYear = async () => {
           if (response.data?.success && response.data?.data) {
             return {
               month,
-              revenue: response.data.data.totalRevenue || 0
+              revenue: response.data.data.totalRevenue || 0,
+              orders: response.data.data.totalOrders || 0
             }
           }
-          return { month, revenue: 0 }
+          return { month, revenue: 0, orders: 0 }
         })
-        .catch(() => ({ month, revenue: 0 }))
+        .catch(() => ({ month, revenue: 0, orders: 0 }))
     )
   }
 
@@ -512,63 +497,53 @@ const loadMonthlyDataForYear = async () => {
   monthlyRevenueData.value = results.sort((a, b) => a.month - b.month)
 }
 
-// Bar chart data - Doanh thu theo tháng trong năm
+// Bar chart data - Doanh thu và số đơn hàng
 const barData = computed(() => {
   const labels = []
-  const data = []
+  const revenueData = []
+  const ordersData = []
 
-  if (viewType.value === 'day') {
-    // Hiển thị doanh thu theo tất cả các ngày trong tháng
+  if (viewType.value === 'month') {
+    // Hiển thị doanh thu và số đơn hàng theo tất cả các ngày trong tháng
     const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
 
     if (dailyRevenueData.value.length > 0) {
       // Tạo map để dễ tìm kiếm
       const revenueMap = new Map()
+      const ordersMap = new Map()
       dailyRevenueData.value.forEach(item => {
         revenueMap.set(item.day, item.revenue)
+        ordersMap.set(item.day, item.orders)
       })
 
       // Hiển thị tất cả các ngày trong tháng
       for (let day = 1; day <= daysInMonth; day++) {
         labels.push(`Ngày ${day}`)
-        data.push(revenueMap.get(day) || 0)
+        revenueData.push(revenueMap.get(day) || 0)
+        ordersData.push(ordersMap.get(day) || 0)
       }
     } else {
       // Fallback: hiển thị tất cả các ngày với giá trị 0
       for (let day = 1; day <= daysInMonth; day++) {
         labels.push(`Ngày ${day}`)
-        data.push(0)
+        revenueData.push(0)
+        ordersData.push(0)
       }
     }
   } else if (viewType.value === 'year') {
-    // Hiển thị doanh thu theo 12 tháng trong năm
+    // Hiển thị doanh thu và số đơn hàng theo 12 tháng trong năm
     if (monthlyRevenueData.value.length > 0) {
       monthlyRevenueData.value.forEach(item => {
         labels.push(`Tháng ${item.month}`)
-        data.push(item.revenue)
+        revenueData.push(item.revenue)
+        ordersData.push(item.orders)
       })
     } else {
       // Fallback: hiển thị 12 tháng với giá trị 0
       for (let month = 1; month <= 12; month++) {
         labels.push(`Tháng ${month}`)
-        data.push(0)
-      }
-    }
-  } else {
-    // Hiển thị doanh thu của tháng được chọn
-    if (statistics.value) {
-      for (let month = 1; month <= 12; month++) {
-        labels.push(`Tháng ${month}`)
-        if (month === selectedMonth.value) {
-          data.push(statistics.value.totalRevenue || 0)
-        } else {
-          data.push(0)
-        }
-      }
-    } else {
-      for (let month = 1; month <= 12; month++) {
-        labels.push(`Tháng ${month}`)
-        data.push(0)
+        revenueData.push(0)
+        ordersData.push(0)
       }
     }
   }
@@ -577,85 +552,102 @@ const barData = computed(() => {
     labels,
     datasets: [
       {
+        type: 'bar',
         label: "Doanh Thu (VNĐ)",
-        data,
+        data: revenueData,
         backgroundColor: "rgba(75, 192, 192, 0.6)",
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,
+        yAxisID: 'y',
+      },
+      {
+        type: 'line',
+        label: "Số Đơn Hàng",
+        data: ordersData,
+        borderColor: "rgba(255, 99, 132, 1)",
+        backgroundColor: "rgba(255, 99, 132, 0.1)",
+        borderWidth: 2,
+        fill: false,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: "rgba(255, 99, 132, 1)",
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+        yAxisID: 'y1',
       },
     ],
   }
 })
 
 // Pie chart data - Top products
-const pieData = computed(() => {
-  if (!topProducts.value || topProducts.value.length === 0) {
-    return {
-      labels: ["Chưa có dữ liệu"],
-      datasets: [
-        {
-          data: [1],
-          backgroundColor: ["rgba(199, 199, 199, 0.6)"],
-          borderColor: ["rgba(199, 199, 199, 1)"],
-          borderWidth: 1,
-        },
-      ],
-    }
-  }
+// const pieData = computed(() => {
+//   if (!topProducts.value || topProducts.value.length === 0) {
+//     return {
+//       labels: ["Chưa có dữ liệu"],
+//       datasets: [
+//         {
+//           data: [1],
+//           backgroundColor: ["rgba(199, 199, 199, 0.6)"],
+//           borderColor: ["rgba(199, 199, 199, 1)"],
+//           borderWidth: 1,
+//         },
+//       ],
+//     }
+//   }
 
-  // Debug: log dữ liệu để kiểm tra
-  console.log('Top Products Data:', topProducts.value)
-  const labels = topProducts.value.map(product => {
-    // Từ console log, field đúng là productName
-    return product.productName || 'Sản phẩm không tên'
-  })
+//   // Debug: log dữ liệu để kiểm tra
+//   console.log('Top Products Data:', topProducts.value)
+//   const labels = topProducts.value.map(product => {
+//     // Từ console log, field đúng là productName
+//     return product.productName || 'Sản phẩm không tên'
+//   })
 
-  const data = topProducts.value.map(product => {
-    // Thử nhiều field name có thể có (theo thứ tự ưu tiên)
-    // Từ console log, field đúng là totalQuantitySold
-    const quantity = product.totalQuantitySold
+//   const data = topProducts.value.map(product => {
+//     // Thử nhiều field name có thể có (theo thứ tự ưu tiên)
+//     // Từ console log, field đúng là totalQuantitySold
+//     const quantity = product.totalQuantitySold
 
-      || 0
-    // Đảm bảo là số
-    const numValue = Number(quantity) || 0
-    return numValue
-  })
+//       || 0
+//     // Đảm bảo là số
+//     const numValue = Number(quantity) || 0
+//     return numValue
+//   })
 
-  // Kiểm tra nếu tất cả giá trị đều là 0
-  const totalQuantity = data.reduce((sum, val) => sum + val, 0)
-  if (totalQuantity === 0) {
-    console.warn('Tất cả giá trị quantity đều là 0, hiển thị biểu đồ với giá trị mặc định')
-    // Nếu tất cả giá trị đều là 0, hiển thị một slice duy nhất
-    return {
-      labels: ["Chưa có dữ liệu bán hàng"],
-      datasets: [
-        {
-          data: [1],
-          backgroundColor: ["rgba(199, 199, 199, 0.6)"],
-          borderColor: ["rgba(199, 199, 199, 1)"],
-          borderWidth: 1,
-        },
-      ],
-    }
-  }
+//   // Kiểm tra nếu tất cả giá trị đều là 0
+//   const totalQuantity = data.reduce((sum, val) => sum + val, 0)
+//   if (totalQuantity === 0) {
+//     console.warn('Tất cả giá trị quantity đều là 0, hiển thị biểu đồ với giá trị mặc định')
+//     // Nếu tất cả giá trị đều là 0, hiển thị một slice duy nhất
+//     return {
+//       labels: ["Chưa có dữ liệu bán hàng"],
+//       datasets: [
+//         {
+//           data: [1],
+//           backgroundColor: ["rgba(199, 199, 199, 0.6)"],
+//           borderColor: ["rgba(199, 199, 199, 1)"],
+//           borderWidth: 1,
+//         },
+//       ],
+//     }
+//   }
 
-  const colors = generateColors(topProducts.value.length)
+//   const colors = generateColors(topProducts.value.length)
 
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        data,
-        backgroundColor: colors.background,
-        borderColor: colors.border,
-        borderWidth: 1,
-      },
-    ],
-  }
+//   const chartData = {
+//     labels,
+//     datasets: [
+//       {
+//         data,
+//         backgroundColor: colors.background,
+//         borderColor: colors.border,
+//         borderWidth: 1,
+//       },
+//     ],
+//   }
 
-  console.log('Pie Chart Data:', chartData)
-  return chartData
-})
+//   console.log('Pie Chart Data:', chartData)
+//   return chartData
+// })
 
 const barOptions = computed(() => ({
   responsive: true,
@@ -670,18 +662,45 @@ const barOptions = computed(() => ({
     tooltip: {
       callbacks: {
         label: function (context) {
-          return `Doanh Thu: ${formatCurrency(context.parsed.y)}`
+          if (context.datasetIndex === 0) {
+            return `Doanh Thu: ${formatCurrency(context.parsed.y)}`
+          } else {
+            return `Số Đơn Hàng: ${formatNumber(context.parsed.y)}`
+          }
         }
       }
     }
   },
   scales: {
     y: {
+      type: 'linear',
+      position: 'left',
       beginAtZero: true,
       ticks: {
         callback: function (value) {
           return formatCurrency(value)
         }
+      },
+      title: {
+        display: true,
+        text: 'Doanh Thu (VNĐ)'
+      }
+    },
+    y1: {
+      type: 'linear',
+      position: 'right',
+      beginAtZero: true,
+      ticks: {
+        callback: function (value) {
+          return formatNumber(value)
+        }
+      },
+      grid: {
+        drawOnChartArea: false,
+      },
+      title: {
+        display: true,
+        text: 'Số Đơn Hàng'
       }
     },
     x: {
@@ -696,26 +715,26 @@ const barOptions = computed(() => ({
   }
 }))
 
-const pieOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: "bottom",
-    },
-    tooltip: {
-      callbacks: {
-        label: function (context) {
-          const label = context.label || ''
-          const value = context.parsed || 0
-          const total = context.dataset.data.reduce((sum, val) => sum + val, 0)
-          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0
-          return `${label}: ${formatNumber(value)} sản phẩm (${percentage}%)`
-        }
-      }
-    }
-  },
-}
+// const pieOptions = {
+//   responsive: true,
+//   maintainAspectRatio: false,
+//   plugins: {
+//     legend: {
+//       position: "bottom",
+//     },
+//     tooltip: {
+//       callbacks: {
+//         label: function (context) {
+//           const label = context.label || ''
+//           const value = context.parsed || 0
+//           const total = context.dataset.data.reduce((sum, val) => sum + val, 0)
+//           const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0
+//           return `${label}: ${formatNumber(value)} sản phẩm (${percentage}%)`
+//         }
+//       }
+//     }
+//   },
+// }
 
 // Load total users
 const loadTotalUsers = async () => {

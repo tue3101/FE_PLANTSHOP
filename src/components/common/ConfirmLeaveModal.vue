@@ -19,9 +19,9 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { defineProps} from 'vue'
 
-const props = defineProps({
+defineProps({
     show: {
         type: Boolean,
         default: false

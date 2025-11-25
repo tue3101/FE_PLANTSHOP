@@ -56,8 +56,12 @@
                             {{ formatDate(item.created_at || item.review_date) }}
                         </template>
                         <template #actions="{ item }">
-                            <ButtonCommon :selected-active="selectedActive" :item="item" @view="openViewDetail"
-                                @update="handleUpdate" @restore="handleRestore" @delete="openDeleteConfirmModal" />
+                            <div :class="[
+                                '[&>div>button:nth-child(2)]:hidden'
+                            ]">
+                                <ButtonCommon :selected-active="selectedActive" :item="item" @view="openViewDetail"
+                                    @restore="handleRestore" @delete="openDeleteConfirmModal" />
+                            </div>
                         </template>
                     </CommonTable>
                 </template>

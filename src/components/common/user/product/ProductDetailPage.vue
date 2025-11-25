@@ -323,8 +323,38 @@ const handleCheckout = async () => {
     if (!canAddToCart.value) return
 
     const userId = authStore.userId
-    await cartStore.addToCart(product.value, quantity.value, userId)
-    router.push('/cart')
+    if (!userId) {
+        alert('Vui lòng đăng nhập để thanh toán!')
+        router.push('/login')
+        return
+    }
+
+    try {
+        // Thêm sản phẩm vào giỏ hàng trước
+        await cartStore.addToCart(product.value, quantity.value, userId)
+
+        // Chuẩn bị thông tin sản phẩm đã chọn để truyền đến CheckInfoPage
+        const selectedItem = {
+            product_id: product.value.product_id || product.value.id,
+            product_name: getProductName(product.value),
+            img_url: getProductImage(product.value),
+            price: product.value.price,
+            quantity: quantity.value,
+            stock: product.value.quantity
+        }
+
+        // Điều hướng trực tiếp đến CheckInfoPage với thông tin sản phẩm
+        router.push({
+            name: 'checkout',
+            query: {
+                selectedItems: JSON.stringify([selectedItem]),
+                fromProductDetail: 'true'
+            }
+        })
+    } catch (error) {
+        const errorMessage = error.message || error.originalError?.response?.data?.message || 'Đã có lỗi xảy ra'
+        alert(`Lỗi khi thêm sản phẩm vào giỏ hàng: ${errorMessage}`)
+    }
 }
 
 const formatPrice = (price) => {
@@ -516,8 +546,6 @@ const loadProduct = async () => {
                 localErrorMessage.value = response.data?.message || 'Không tìm thấy sản phẩm'
             }
         } catch (error) {
-
-            // Fallback: thử tìm trong store nếu có
             try {
                 if (!productStore.products || productStore.products.length === 0) {
                     await productStore.getProducts()

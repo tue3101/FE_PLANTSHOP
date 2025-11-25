@@ -4,7 +4,7 @@
             <h1 class="text-3xl font-bold text-green-700 mb-6 text-center">Kiểm tra thông tin giao hàng</h1>
 
             <!-- Confirm Leave Modal -->
-            <ConfirmLeaveModal :show="showConfirmModal"  @confirm="handleConfirmLeave" @cancel="handleCancelLeave" />
+            <ConfirmLeaveModal :show="showConfirmModal" @confirm="handleConfirmLeave" @cancel="handleCancelLeave" />
 
             <div class="bg-white rounded-lg shadow p-6">
                 <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -82,7 +82,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const userStore = useUserStore()
-const { isLoading, errorMessage } = useAsyncOperation()
+const { isLoading, errorMessage, executeAsync } = useAsyncOperation()
 
 const formData = ref({
     username: '',
@@ -129,7 +129,7 @@ onMounted(async () => {
     // Xóa flag order_completed để tránh redirect về home khi đang ở trang checkout
     // (flag này có thể còn sót từ lần thanh toán trước)
     sessionStorage.removeItem('order_completed')
-    sessionStorage.removeItem('completed_order_id')
+    // KHÔNG xóa completed_order_id vì có thể cần dùng để cập nhật shipping info
 
     try {
         const token = authStore.accessToken
@@ -155,17 +155,38 @@ const handleSubmit = async () => {
         return
     }
 
-    // Xóa flag review_page_left để đảm bảo có thể vào trang ReviewOrderPage
-    // (flag này được set khi rời khỏi ReviewOrderPage, nhưng khi navigate từ CheckoutPage thì cần xóa)
-    sessionStorage.removeItem('review_page_left')
+    await executeAsync(async () => {
+        // Lưu thông tin giao hàng vào sessionStorage
+        const shippingInfo = {
+            shipping_name: formData.value.username,
+            shipping_address: formData.value.address,
+            shipping_phone: formData.value.phone_number
+        }
 
-    // Navigate to review order page with shipping info
-    router.push({
-        name: 'review-order',
-        query: {
-            ...route.query, // Preserve selectedItems from cart page
-            shippingInfo: JSON.stringify(formData.value),
-            fromCheckout: 'true' // Đánh dấu là điều hướng từ checkout
+        sessionStorage.setItem('shipping_name', shippingInfo.shipping_name)
+        sessionStorage.setItem('shipping_address', shippingInfo.shipping_address)
+        sessionStorage.setItem('shipping_phone', shippingInfo.shipping_phone)
+
+        console.log('✅ CheckInfoPage - Shipping info saved to sessionStorage:', shippingInfo)
+
+        // Xóa flag review_page_left để đảm bảo có thể vào trang ReviewOrderPage
+        // (flag này được set khi rời khỏi ReviewOrderPage, nhưng khi navigate từ CheckoutPage thì cần xóa)
+        sessionStorage.removeItem('review_page_left')
+
+        // Navigate to review order page with shipping info
+        router.push({
+            name: 'review-order',
+            query: {
+                ...route.query, // Preserve selectedItems from cart page
+                shippingInfo: JSON.stringify(formData.value),
+                fromCheckout: 'true' // Đánh dấu là điều hướng từ checkout
+            }
+        })
+    }, {
+        defaultErrorMessage: 'Có lỗi xảy ra. Vui lòng thử lại!',
+        onError: (error) => {
+            // Nếu lỗi là do cập nhật user info hoặc shipping info, vẫn cho phép tiếp tục
+            console.error('Error in handleSubmit:', error)
         }
     })
 }

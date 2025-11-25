@@ -398,55 +398,88 @@ if (typeof window !== 'undefined') {
   updateFeaturedProductsPerSlide()
   window.addEventListener('resize', updateFeaturedProductsPerSlide)
 }
-// Hàm xử lý hủy đơn hàng khi user quay về từ web payment MoMo
+const clearMoMoFlags = () => {
+  sessionStorage.removeItem('momo_payment_order_id')
+  sessionStorage.removeItem('momo_payment_timestamp')
+}
+
+const ensureOrderStatus = async (orderId, desiredStatus) => {
+  try {
+    const orderResp = await orderStore.getOrderByIdStore(orderId)
+    if (orderResp?.data?.success && orderResp.data.data) {
+      const currentStatus = orderResp.data.data.status
+      if (currentStatus !== desiredStatus) {
+        await orderStore.updateOrderStatusStore(orderId, desiredStatus)
+      }
+    }
+  } catch (error) {
+    console.error(`❌ HomePage - Lỗi khi cập nhật trạng thái đơn hàng ${orderId} -> ${desiredStatus}:`, error)
+  }
+}
+
+const updatePaymentStatusIfNeeded = async (payment, targetStatus) => {
+  if (!payment) return
+  const paymentId = payment.payment_id || payment.id || payment.paymentId
+  const currentStatus = payment.status || payment.payment_status
+  if (paymentId && currentStatus !== targetStatus) {
+    await paymentStore.updatePaymentStatusStore(paymentId, targetStatus)
+  }
+}
+
+// Hàm xử lý kết quả MoMo dựa trên trạng thái thực tế từ backend
 const handleMoMoPaymentReturn = async () => {
   const momoOrderId = sessionStorage.getItem('momo_payment_order_id')
   const momoTimestamp = sessionStorage.getItem('momo_payment_timestamp')
 
-  // Kiểm tra xem có đang quay lại từ MoMo payment không
-  if (momoOrderId && momoTimestamp) {
-    console.log('🔍 HomePage - Phát hiện flags MoMo payment, bắt đầu xử lý hủy đơn hàng')
-    const orderIdNum = parseInt(momoOrderId)
+  if (!momoOrderId || !momoTimestamp) return
 
-    if (orderIdNum) {
-      try {
-        // Bước 1: Cập nhật trạng thái đơn hàng thành CANCELLED
-        console.log('🔄 HomePage - Đang cập nhật trạng thái đơn hàng thành CANCELLED:', orderIdNum)
-        const cancelResponse = await orderStore.cancelOrderStore(orderIdNum)
-        if (cancelResponse?.data?.success) {
-          console.log('✅ HomePage - Đã cập nhật trạng thái đơn hàng thành CANCELLED:', orderIdNum)
-        }
+  const orderIdNum = parseInt(momoOrderId)
+  if (!orderIdNum) {
+    clearMoMoFlags()
+    return
+  }
 
-        // Bước 2: Cập nhật payment status thành FAILED
-        try {
-          console.log('💳 HomePage - Đang lấy payment để cập nhật status thành FAILED:', orderIdNum)
-          const paymentResponse = await paymentStore.getPaymentByOrderIdStore(orderIdNum)
-          if (paymentResponse?.data?.success && paymentResponse?.data?.data) {
-            const payment = paymentResponse.data.data
-            const paymentId = payment.payment_id || payment.id || payment.paymentId
+  try {
+    console.log('🔍 HomePage - Kiểm tra trạng thái MoMo cho order:', orderIdNum)
+    const paymentResponse = await paymentStore.getPaymentByOrderIdStore(orderIdNum)
+    const payment = paymentResponse?.data?.data || null
+    const paymentStatus = payment?.status || payment?.payment_status
 
-            if (paymentId) {
-              console.log('💳 HomePage - Đang cập nhật payment status thành FAILED:', paymentId)
-              await paymentStore.updatePaymentStatusStore(paymentId, 'FAILED')
-              console.log('✅ HomePage - Đã cập nhật payment status thành FAILED')
-            } else {
-              console.warn('⚠️ HomePage - Không tìm thấy payment_id trong payment object')
-            }
-          } else {
-            console.warn('⚠️ HomePage - Không tìm thấy payment cho order:', orderIdNum)
-          }
-        } catch (paymentError) {
-          console.error('❌ HomePage - Lỗi khi cập nhật payment status:', paymentError)
-        }
-
-        // Xóa flags sau khi xử lý
-        sessionStorage.removeItem('momo_payment_order_id')
-        sessionStorage.removeItem('momo_payment_timestamp')
-        console.log('✅ HomePage - Đã xử lý xong: cập nhật trạng thái CANCELLED và payment FAILED')
-      } catch (error) {
-        console.error('❌ HomePage - Lỗi khi xử lý MoMo payment return:', error)
-      }
+    if (paymentStatus === 'SUCCESS') {
+      console.log('✅ HomePage - Payment đã SUCCESS, đảm bảo đơn hàng CONFIRMED')
+      await ensureOrderStatus(orderIdNum, 'CONFIRMED')
+      clearMoMoFlags()
+      return
     }
+
+    if (paymentStatus === 'FAILED') {
+      console.log('⚠️ HomePage - Payment FAILED, hủy đơn hàng')
+      await ensureOrderStatus(orderIdNum, 'CANCELLED')
+      await updatePaymentStatusIfNeeded(payment, 'FAILED')
+      clearMoMoFlags()
+      return
+    }
+
+    // Nếu payment chưa có trạng thái cuối cùng, kiểm tra order status
+    const orderResp = await orderStore.getOrderByIdStore(orderIdNum)
+    const orderStatus = orderResp?.data?.data?.status
+
+    if (orderStatus === 'CONFIRMED' || orderStatus === 'DELIVERED') {
+      console.log('ℹ️ HomePage - Order đã ở trạng thái hoàn tất, không hủy.')
+      clearMoMoFlags()
+      return
+    }
+
+    if (orderStatus === 'CANCELLED') {
+      console.log('ℹ️ HomePage - Order đã bị hủy trước đó.')
+      clearMoMoFlags()
+      return
+    }
+
+    console.log('⏳ HomePage - Payment chưa có kết quả cuối, giữ nguyên đơn hàng.')
+    // Không xóa flags để PaymentReturnPage hoặc lần tải sau tiếp tục xử lý
+  } catch (error) {
+    console.error('❌ HomePage - Lỗi khi lấy trạng thái MoMo:', error)
   }
 }
 

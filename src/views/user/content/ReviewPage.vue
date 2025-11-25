@@ -60,7 +60,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         Đánh giá của bạn:
                                     </label>
-                                    <StarRating v-model="productItem.rating" :disabled="isSubmittingAll" />
+                                    <StarRating v-model="productItem.rating" :disabled="isSubmittingAll || productItem.isSubmitting" />
                                 </div>
 
                                 <div class="mb-4">
@@ -71,11 +71,21 @@
                                     <textarea :id="`comment-${productItem.product_id}`" v-model="productItem.comment"
                                         rows="3" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
                                         class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        :disabled="isSubmittingAll"></textarea>
+                                        :disabled="isSubmittingAll || productItem.isSubmitting"></textarea>
                                 </div>
 
                                 <div v-if="productItem.reviewError" class="mb-2 text-red-600 text-sm">
                                     {{ productItem.reviewError }}
+                                </div>
+
+                                <!-- Submit Single Review Button -->
+                                <div class="flex justify-end mt-4">
+                                    <button type="button" 
+                                        @click="handleSubmitSingleReview(productItem)"
+                                        :disabled="!canSubmitSingle(productItem) || productItem.isSubmitting"
+                                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer font-semibold">
+                                        {{ productItem.isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá' }}
+                                    </button>
                                 </div>
                             </div>
 
@@ -180,7 +190,7 @@ const loadProductsToReview = async () => {
         }
 
         // Check if order is DELIVERED
-        if (order.status !== 'DELIVERED') {
+        if (order.shipping_status !== 'DELIVERED') {
             errorMessage.value = 'Chỉ có thể đánh giá đơn hàng đã được giao thành công!'
             return
         }
@@ -213,7 +223,10 @@ const loadProductsToReview = async () => {
 
                 // Check if user has already reviewed this product
                 const existingReview = userReviews.find(
-                    r => r.product_id === productId
+                    r => {
+                        const reviewProductId = r.product_id || r.product?.product_id
+                        return reviewProductId === productId
+                    }
                 )
 
                 productsToReview.value.push({
@@ -297,39 +310,44 @@ const handleSubmitAllReviews = async () => {
     }
 }
 
-// Handle submit single review (for edit)
-// const handleSubmitReview = async (productItem) => {
-//     if (productItem.rating === 0) {
-//         productItem.reviewError = 'Vui lòng chọn số sao đánh giá!'
-//         return
-//     }
+// Check if single review can be submitted
+const canSubmitSingle = (productItem) => {
+    return productItem.rating > 0
+}
 
-//     productItem.isSubmitting = true
-//     productItem.reviewError = ''
+// Handle submit single review
+const handleSubmitSingleReview = async (productItem) => {
+    if (productItem.rating === 0) {
+        productItem.reviewError = 'Vui lòng chọn số sao đánh giá!'
+        return
+    }
 
-//     try {
-//         const reviewData = {
-//             product_id: productItem.product_id,
-//             rating: productItem.rating,
-//             comment: productItem.comment || ''
-//         }
+    productItem.isSubmitting = true
+    productItem.reviewError = ''
 
-//         if (productItem.hasReview && productItem.existingReview) {
-//             // Update existing review
-//             await reviewStore.updateReviewStore(productItem.existingReview.review_id, reviewData)
-//         } else {
-//             // Create new review
-//             await reviewStore.createReviewStore(reviewData)
-//         }
+    try {
+        const reviewData = {
+            product_id: productItem.product_id,
+            rating: productItem.rating,
+            comment: productItem.comment || ''
+        }
 
-//         // Reload to update hasReview status
-//         await loadProductsToReview()
-//     } catch (error) {
-//         productItem.reviewError = error.response?.data?.message || error.message || 'Không thể gửi đánh giá!'
-//     } finally {
-//         productItem.isSubmitting = false
-//     }
-// }
+        if (productItem.hasReview && productItem.existingReview) {
+            // Update existing review
+            await reviewStore.updateReviewStore(productItem.existingReview.review_id, reviewData)
+        } else {
+            // Create new review
+            await reviewStore.createReviewStore(reviewData)
+        }
+
+        // Reload to update hasReview status
+        await loadProductsToReview()
+    } catch (error) {
+        productItem.reviewError = error.response?.data?.message || error.message || 'Không thể gửi đánh giá!'
+    } finally {
+        productItem.isSubmitting = false
+    }
+}
 
 // Handle edit review
 const handleEditReview = (productItem) => {
