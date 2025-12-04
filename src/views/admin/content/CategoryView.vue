@@ -46,10 +46,19 @@
         <ViewDetailModal :showModal="showViewModal" :title="'Chi tiết Danh Mục'" :item="selectedItem"
             :fields="categoryFields" @close="closeViewModal" @update:showModal="showViewModal = $event" />
 
-        <!-- Modals -->
+        <!-- Delete Modals -->
         <DeleteModal :showModal="showDeleteConfirmModal" mode="confirm" @confirm="handleDeleteConfirm"
             @cancel="handleDeleteCancel" />
-        <DeleteModal :showModal="showDeleteSuccessModal" mode="success" @close="handleDeleteSuccessClose" />
+        <DeleteModal :showModal="showDeleteSuccessModal" mode="delete-success" @close="handleDeleteSuccessClose" />
+
+        <!-- Add Success Modal -->
+        <DeleteModal :showModal="showAddSuccessModal" mode="add-success" @close="handleAddSuccessClose" />
+
+        <!-- Update Success Modal -->
+        <DeleteModal :showModal="showUpdateSuccessModal" mode="update-success" @close="handleUpdateSuccessClose" />
+
+        <!-- Restore Success Modal -->
+        <DeleteModal :showModal="showRestoreSuccessModal" mode="restore-success" @close="handleRestoreSuccessClose" />
     </div>
 </template>
 
@@ -119,6 +128,7 @@ const { isLoading, errorMessage, executeAsync, resetError } = useAsyncOperation(
 
 // ===================================Add Modal=====================
 const showAddModal = ref(false)
+const showAddSuccessModal = ref(false)
 const addError = ref('')
 const { executeAsync: executeAddAsync, isLoading: isAdding } = useAsyncOperation()
 
@@ -130,6 +140,10 @@ const openAddModal = () => {
 const closeAddModal = () => {
     showAddModal.value = false
     addError.value = ''
+}
+
+const handleAddSuccessClose = () => {
+    showAddSuccessModal.value = false
 }
 
 const handleAddCategory = async (categoryData) => {
@@ -147,6 +161,7 @@ const handleAddCategory = async (categoryData) => {
         await refreshCategoriesData(token)
         closeAddModal()
         addError.value = '' // Reset error khi thành công
+        showAddSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể thêm danh mục!',
         onError: (error) => {
@@ -156,6 +171,7 @@ const handleAddCategory = async (categoryData) => {
 }
 // ====================================Update Modal==================
 const showUpdateModal = ref(false)
+const showUpdateSuccessModal = ref(false)
 const updateError = ref('')
 const selectedCategoryForUpdate = ref(null)
 const { executeAsync: executeUpdateAsync, isLoading: isUpdating } = useAsyncOperation()
@@ -170,6 +186,10 @@ const closeUpdateModal = () => {
     showUpdateModal.value = false
     selectedCategoryForUpdate.value = null
     updateError.value = ''
+}
+
+const handleUpdateSuccessClose = () => {
+    showUpdateSuccessModal.value = false
 }
 
 const handleUpdateCategory = async (categoryData) => {
@@ -190,6 +210,7 @@ const handleUpdateCategory = async (categoryData) => {
         await refreshCategoriesData(token)
         closeUpdateModal()
         updateError.value = ''
+        showUpdateSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể cập nhật danh mục!',
         onError: (error) => {
@@ -258,6 +279,12 @@ async function handleDeleteConfirm() {
     })
 }
 //================================restore================================
+const showRestoreSuccessModal = ref(false)
+
+const handleRestoreSuccessClose = () => {
+    showRestoreSuccessModal.value = false
+}
+
 async function handleRestore(item) {
     const categoryId = item.category_id
     const token = authStore.accessToken || ''
@@ -270,6 +297,7 @@ async function handleRestore(item) {
     await executeAsync(async () => {
         await productStore.restoreCategoryStore(categoryId, token)
         await refreshCategoriesData(token)
+        showRestoreSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể khôi phục danh mục!',
         onError: (error) => {

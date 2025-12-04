@@ -23,9 +23,9 @@
         class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
     </div>
     <div class="mb-6">
-      <label for="address" class="block text-gray-700 font-bold mb-2">Address</label>
-      <input v-model="localFormData.address" type="tel" id="address" placeholder="abcxyz"
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <label for="address" class="block text-gray-700 font-bold mb-2">Địa chỉ</label>
+      <textarea v-model="localFormData.address" id="address" rows="3" placeholder="Nhập địa chỉ của bạn"
+        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
     </div>
     <div v-if="errorMessage" class="mb-4 text-red-600 text-sm text-center">
       {{ errorMessage }}
@@ -53,16 +53,24 @@
       </div>
     </template>
   </ModalCommon>
+
+  <!-- Modal cập nhật thành công -->
+  <DeleteModal :show-modal="showUpdateSuccessModal" mode="update-success" title="Cập nhật thành công"
+    message="Thông tin cá nhân đã được cập nhật thành công!" @close="handleCloseUpdateSuccessModal"
+    @update:show-modal="showUpdateSuccessModal = $event" />
 </template>
 
 
 <script setup>
 import { ref, watch, computed } from 'vue'
 import ModalCommon from '@/components/common/admin/ModalCommon.vue'
+import DeleteModal from '@/components/common/admin/DeleteModal.vue'
 
 const showChangeModal = ref(false)
 const isChangingPassword = ref(false)
 const passwordError = ref('')
+const showUpdateSuccessModal = ref(false)
+const previousLoadingState = ref(false)
 
 const passwordFields = computed(() => [
   {
@@ -120,10 +128,14 @@ const props = defineProps({
   errorMessage: {
     type: String,
     default: ''
+  },
+  updateSuccess: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update', 'change-password'])
+const emit = defineEmits(['update', 'change-password', 'update-success-reset'])
 
 const localFormData = ref({ ...props.formData })
 
@@ -132,13 +144,42 @@ const isUserRole = computed(() => {
   return role.toLowerCase() === 'user'
 })
 
+
 // Đồng bộ dữ liệu khi props thay đổi
 watch(() => props.formData, (newData) => {
   localFormData.value = { ...newData }
 }, { deep: true })
 
+// Theo dõi prop updateSuccess để hiển thị modal thành công
+watch(() => props.updateSuccess, (newValue) => {
+  if (newValue === true) {
+    showUpdateSuccessModal.value = true
+  }
+}, { immediate: false })
+
+// Theo dõi trạng thái loading để hiển thị modal thành công (fallback)
+watch(() => props.isLoading, (newLoading, oldLoading) => {
+  // Khi loading chuyển từ true sang false và không có lỗi, hiển thị modal thành công
+  if (oldLoading === true && newLoading === false && !props.errorMessage && !props.updateSuccess) {
+    // Chỉ hiển thị modal nếu đã từng submit (previousLoadingState = true)
+    if (previousLoadingState.value) {
+      showUpdateSuccessModal.value = true
+      previousLoadingState.value = false
+    }
+  }
+  // Lưu trạng thái loading trước đó
+  if (newLoading === true) {
+    previousLoadingState.value = true
+  }
+})
+
 const handleSubmit = () => {
-  emit('update', localFormData.value)
+  // Gửi dữ liệu với địa chỉ từ input
+  const submitData = {
+    ...localFormData.value,
+    address: localFormData.value.address || ''
+  }
+  emit('update', submitData)
 }
 
 const handleChangePassword = (passwordData) => {
@@ -159,6 +200,13 @@ const handleChangePassword = (passwordData) => {
     newPassword: passwordData.newPassword
   })
   closeChangeModal()
+}
+
+// Đóng modal cập nhật thành công
+const handleCloseUpdateSuccessModal = () => {
+  showUpdateSuccessModal.value = false
+  // Emit event để parent component reset updateSuccess
+  emit('update-success-reset')
 }
 
 </script>

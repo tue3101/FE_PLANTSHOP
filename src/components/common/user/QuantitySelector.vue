@@ -18,7 +18,7 @@
             <input :value="modelValue" type="number" :min="min" :max="max" :disabled="disabled" :class="[
                 'w-20 text-center border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500',
                 disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed opacity-50' : ''
-            ]" @input="handleInputChange" />
+            ]" @input="handleInputChange" @blur="handleBlur" />
             <button @click="handleIncrease" :disabled="disabled || modelValue >= max" :class="[
                 'w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-colors',
                 (disabled || modelValue >= max)
@@ -68,7 +68,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['update:modelValue', 'increase', 'decrease'])
+const emit = defineEmits(['update:modelValue', 'increase', 'decrease', 'exceedMax'])
 
 // Xử lý tăng số lượng
 const handleIncrease = () => {
@@ -90,23 +90,69 @@ const handleDecrease = () => {
     }
 }
 
-// Xử lý input thay đổi
+// Xử lý input thay đổi - cho phép xóa và nhập giá trị
 const handleInputChange = (event) => {
     if (props.disabled) return
-    let value = parseInt(event.target.value) || props.min
+
+    const inputValue = event.target.value.trim()
+
+    // Cho phép input rỗng tạm thời (để có thể xóa) - không emit, giữ giá trị hiện tại
+    if (inputValue === '' || inputValue === null || inputValue === undefined) {
+        // Cho phép input rỗng để người dùng có thể xóa, nhưng không emit
+        // Sẽ được xử lý trong handleBlur
+        return
+    }
+
+    // Parse giá trị
+    let value = parseInt(inputValue)
+
+    // Nếu không phải số hợp lệ, không làm gì cả để người dùng tiếp tục nhập
+    if (isNaN(value)) {
+        return
+    }
+
+    // Nếu nhập 0, set về min (mặc định là 1) ngay lập tức
+    if (value === 0) {
+        value = props.min
+        event.target.value = value
+        emit('update:modelValue', value)
+        return
+    }
+
+    // Kiểm tra nếu vượt quá max, emit event để parent xử lý
+    if (value > props.max) {
+        emit('exceedMax', value)
+        // Vẫn emit để parent có thể xử lý, nhưng giữ giá trị max trong input
+        event.target.value = props.max
+        emit('update:modelValue', props.max)
+        return
+    }
 
     // Validate: không được nhỏ hơn min
     if (value < props.min) {
         value = props.min
+        event.target.value = value
     }
 
-    // Validate: không được lớn hơn max
-    if (value > props.max) {
-        value = props.max
-    }
-
-    // Cập nhật giá trị input để đảm bảo hiển thị đúng
-    event.target.value = value
     emit('update:modelValue', value)
+}
+
+// Xử lý khi blur (mất focus) - đảm bảo giá trị hợp lệ
+const handleBlur = (event) => {
+    if (props.disabled) return
+
+    let value = parseInt(event.target.value)
+
+    // Nếu rỗng hoặc không hợp lệ, set về min (mặc định là 1)
+    if (isNaN(value) || value === '' || value === null || value === undefined || value < props.min) {
+        value = props.min
+        event.target.value = value
+        emit('update:modelValue', value)
+    } else if (value > props.max) {
+        // Nếu vượt quá max, emit event và set về max
+        emit('exceedMax', value)
+        event.target.value = props.max
+        emit('update:modelValue', props.max)
+    }
 }
 </script>

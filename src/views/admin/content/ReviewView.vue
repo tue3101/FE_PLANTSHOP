@@ -75,7 +75,10 @@
         <!-- Delete Modals -->
         <DeleteModal :showModal="showDeleteConfirmModal" mode="confirm" @confirm="handleDeleteConfirm"
             @cancel="handleDeleteCancel" />
-        <DeleteModal :showModal="showDeleteSuccessModal" mode="success" @close="handleDeleteSuccessClose" />
+        <DeleteModal :showModal="showDeleteSuccessModal" mode="delete-success" @close="handleDeleteSuccessClose" />
+
+        <!-- Restore Success Modal -->
+        <DeleteModal :showModal="showRestoreSuccessModal" mode="restore-success" @close="handleRestoreSuccessClose" />
     </div>
 </template>
 
@@ -283,6 +286,12 @@ const handleDeleteSuccessClose = () => {
 }
 
 // Restore function
+const showRestoreSuccessModal = ref(false)
+
+const handleRestoreSuccessClose = () => {
+    showRestoreSuccessModal.value = false
+}
+
 const handleRestore = async (item) => {
     const reviewId = item.review_id
     const token = authStore.accessToken || ''
@@ -300,6 +309,7 @@ const handleRestore = async (item) => {
     await executeAsync(async () => {
         await reviewStore.restoreReviewStore(reviewId)
         await refreshReviewsData(token)
+        showRestoreSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể khôi phục đánh giá!',
         onError: (error) => {

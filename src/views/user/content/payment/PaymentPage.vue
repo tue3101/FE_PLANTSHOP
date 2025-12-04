@@ -71,89 +71,77 @@
                 <!-- Right: Order Summary & Discount -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-4">
-                        <h2 class="text-xl font-bold text-gray-900 mb-6 pb-3 border-b border-gray-200">Đơn hàng của bạn
-                        </h2>
-
-                        <!-- Discount Section -->
-                        <div class="mb-6 pb-6 border-b border-gray-200">
-                            <label class="block text-gray-900 font-semibold mb-3">Mã giảm giá</label>
-                            <div class="flex gap-2 mb-4">
-                                <input v-model="discountCode" type="text" placeholder="Nhập mã giảm giá"
-                                    class="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm" />
-                                <button @click="applyDiscountCode" :disabled="isLoadingDiscount"
-                                    class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer text-sm whitespace-nowrap">
-                                    {{ isLoadingDiscount ? '...' : 'Áp dụng' }}
+                        <!-- Hiển thị các mã giảm giá có thể áp dụng -->
+                        <div v-if="availableDiscountCodes.length > 0" class="mt-4">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Mã giảm giá có thể áp dụng:</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button v-for="discount in availableDiscountCodes" :key="discount.code"
+                                    @click="applyAvailableDiscount(discount)" :class="[
+                                        'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border text-left',
+                                        appliedSpecialDiscount?.code === discount.code
+                                            ? 'bg-green-600 text-white border-green-700'
+                                            : 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300'
+                                    ]"
+                                    :title="discount.description || `Mã ${discount.code}${discount.quantity > 0 ? ` - Áp dụng cho đơn hàng từ ${discount.quantity} sản phẩm` : ''}`"
+                                    :disabled="appliedSpecialDiscount?.code === discount.code">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold">{{ discount.code }}</span>
+                                            <span class="text-xs opacity-75">
+                                                <span v-if="discount.type === 'percent'">
+                                                    - {{ discount.value }}%
+                                                </span>
+                                                <span v-else-if="discount.type === 'amount'">
+                                                    - {{ formatPrice(discount.value) }}
+                                                </span>
+                                                <span v-if="discount.quantity > 0" class="ml-1">
+                                                    • Từ {{ discount.quantity }} SP
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <span v-if="appliedSpecialDiscount?.code === discount.code"
+                                            class="text-base">✓</span>
+                                    </div>
                                 </button>
                             </div>
-
-                            <div v-if="appliedSpecialDiscount"
-                                class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                                <div class="flex items-start justify-between mb-2">
-                                    <p class="text-sm text-green-800">
-                                        <span class="font-semibold">Đã áp dụng:</span>
-                                        <span class="font-bold">{{ appliedSpecialDiscount.code }}</span>
-                                        <span v-if="appliedSpecialDiscount.type === 'percent'" class="ml-1">
-                                            - {{ appliedSpecialDiscount.value }}%
-                                        </span>
-                                        <span v-else-if="appliedSpecialDiscount.type === 'amount'" class="ml-1">
-                                            - {{ formatPrice(appliedSpecialDiscount.value) }}
-                                        </span>
-                                        <span v-else-if="appliedSpecialDiscount.type === 'freeship'" class="ml-1">
-                                            - Miễn phí vận chuyển
-                                        </span>
-                                    </p>
-                                </div>
-                                <button @click="removeDiscount"
-                                    class="text-red-600 text-sm hover:text-red-700 hover:underline font-medium cursor-pointer">
-                                    Xóa mã giảm giá
-                                </button>
-                            </div>
-
-                            <!-- Hiển thị các mã giảm giá có thể áp dụng -->
-                            <div v-if="availableDiscountCodes.length > 0" class="mt-4">
-                                <p class="text-sm font-semibold text-gray-700 mb-2">Mã giảm giá có thể áp dụng:</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <button v-for="discount in availableDiscountCodes" :key="discount.code"
-                                        @click="applyAvailableDiscount(discount)" :class="[
-                                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border',
-                                            appliedSpecialDiscount?.code === discount.code
-                                                ? 'bg-green-600 text-white border-green-700'
-                                                : 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300'
-                                        ]" :title="discount.description"
-                                        :disabled="appliedSpecialDiscount?.code === discount.code">
-                                        <span class="font-bold">{{ discount.code }}</span>
-                                        <span v-if="discount.type === 'percent'" class="ml-1">
-                                            - {{ discount.value }}%
-                                        </span>
-                                        <span v-else-if="discount.type === 'amount'" class="ml-1">
-                                            - {{ formatPrice(discount.value) }}
-                                        </span>
-                                        <span v-if="appliedSpecialDiscount?.code === discount.code" class="ml-1">
-                                            ✓
-                                        </span>
+                            <!-- Discount Section -->
+                            <div class="space-y-3 border-t border-green-300 mt-5">
+                                <div v-if="appliedSpecialDiscount"
+                                    class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <p class="text-sm text-green-800">
+                                            <span class="font-semibold">Đã áp dụng:</span>
+                                            <span class="font-bold">{{ appliedSpecialDiscount.code }}</span>
+                                            <span v-if="appliedSpecialDiscount.type === 'percent'" class="ml-1">
+                                                - {{ appliedSpecialDiscount.value }}%
+                                            </span>
+                                            <span v-else-if="appliedSpecialDiscount.type === 'amount'" class="ml-1">
+                                                - {{ formatPrice(appliedSpecialDiscount.value) }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <button @click="removeDiscount"
+                                        class="text-red-600 text-sm hover:text-red-700 hover:underline font-medium cursor-pointer">
+                                        Xóa mã giảm giá
                                     </button>
                                 </div>
                             </div>
 
-                            <div class="mt-3 text-sm text-red-500 bg-gray-50 p-2 rounded">
-                                <p>💡 Không áp dụng đồng thời nhiều mã khuyến mãi!</p>
-                            </div>
-                            <!-- Error Message -->
-                            <div v-if="errorMessage"
-                                class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
-                                {{ errorMessage }}
-                            </div>
-
-                            <!-- FreeShip info (tự động) -->
-                            <div v-if="totalQuantity >= 15 && subTotal >= 4000000"
-                                class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                                <p class="text-sm text-green-800">
-                                    <span class="font-semibold">🎉 Miễn phí vận chuyển:</span>
-                                    <span class="block mt-1 text-xs">Đơn hàng từ 15 sản phẩm và tổng giá trị từ
-                                        4.000.000 VND</span>
+                            <div class=" flex mt-3 text-sm text-red-500 bg-gray-50 p-2 rounded">
+                                <Lightbulb class="w-6 h-5  text-yellow-400 items-center" />
+                                <p>
+                                    Không áp dụng đồng thời nhiều mã khuyến mãi!
                                 </p>
                             </div>
                         </div>
+
+
+                        <!-- Error Message -->
+                        <div v-if="errorMessage"
+                            class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+                            {{ errorMessage }}
+                        </div>
+
 
                         <!-- Payment Method -->
                         <div class="mb-6 pb-6 border-b border-gray-200">
@@ -199,11 +187,12 @@
                             <div v-if="specialDiscountAmount > 0"
                                 class="flex justify-between items-center py-2 text-green-600">
                                 <span class="text-sm">
-                                    Giảm giá mã
+                                    Khuyến mãi(
                                     <span v-if="appliedSpecialDiscount?.code" class="font-medium">({{
                                         appliedSpecialDiscount.code }}</span>
-                                    <span v-if="specialDiscountPercent !== null"> - {{ specialDiscountPercent }}%</span>
-                                    <span v-if="appliedSpecialDiscount?.code">)</span>:
+                                    <!-- <span v-if="specialDiscountPercent !== null"> - {{ specialDiscountPercent }}%</span>
+                                    <span v-if="appliedSpecialDiscount?.code">)</span> -->
+                                    )
                                 </span>
                                 <span class="font-semibold">-{{ formatPrice(specialDiscountAmount) }}</span>
                             </div>
@@ -239,15 +228,16 @@
             </div>
         </div>
 
-        <!-- Confirm Leave Modal -->
-        <ConfirmLeaveModal :show="showConfirmModal" title="Tải lại trang web?"
-            message="Bạn có chắc muốn rời khỏi trang này? Các thay đổi của bạn có thể không được lưu."
-            confirm-text="Tải lại" @confirm="handleConfirmLeave" @cancel="handleCancelLeave" />
+        <!-- Deposit Modal -->
+        <DepositModal :show="showDepositModal" :deposit="currentDeposit" :deposit-payment="currentDepositPayment"
+            :order-id="createdOrderId" :order-data="depositOrderData" :deposit-amount="depositAmount"
+            @close="handleCloseDepositModal" @payment="handleCreateOrderForDeposit"
+            @order-created="handleOrderCreatedFromDeposit" />
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
@@ -258,8 +248,9 @@ import { usePaymentMethodStore } from '@/stores/payment-methods'
 import { usePaymentStore } from '@/stores/payments'
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
 import BackButton from '@/components/common/user/BackButton.vue'
-import ConfirmLeaveModal from '@/components/common/ConfirmLeaveModal.vue'
+import DepositModal from '@/components/common/user/DepositModal.vue'
 import { ShoppingCart } from 'lucide-vue-next'
+import { Lightbulb } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -274,17 +265,16 @@ const { isLoading: isCreatingOrder, errorMessage, executeAsync } = useAsyncOpera
 
 const shippingInfo = ref({})
 const orderItems = ref([])
-const discountCode = ref('')
 const appliedSpecialDiscount = ref(null)
 const availableDiscounts = ref([])
-const isLoadingDiscount = ref(false)
 const paymentMethod = ref('COD')
 const createdOrderId = ref(null)
 const isOrderCompleted = ref(false)
 
-// Modal confirm leave
-const showConfirmModal = ref(false)
-const pendingNavigation = ref(null)
+// Deposit fields
+const showDepositModal = ref(false)
+const currentDeposit = ref(null)
+const currentDepositPayment = ref(null)
 
 
 // Kiểm tra xem có đang trong quá trình thanh toán không
@@ -292,24 +282,51 @@ const isPaymentActive = () => {
     return createdOrderId.value !== null && paymentMethod.value === 'MOMO'
 }
 
-// Xử lý hủy đơn hàng khi user rời khỏi trang
-const handleDeleteOrderOnLeave = async (orderId) => {
+// Kiểm tra xem có đang trong quá trình thanh toán MoMo không (dựa vào sessionStorage)
+const isMoMoPaymentActive = () => {
+    const momoOrderId = sessionStorage.getItem('momo_payment_order_id')
+    const momoTimestamp = sessionStorage.getItem('momo_payment_timestamp')
+    return !!(momoOrderId && momoTimestamp) || isPaymentActive()
+}
+
+// Hàm hủy đơn hàng khi user rời khỏi trang thanh toán MoMo
+const cancelOrderOnMoMoLeave = async () => {
     try {
-        console.log('🔄 User xác nhận rời khỏi, đang hủy đơn hàng:', orderId)
+        // Kiểm tra sessionStorage flags trước
+        const momoOrderId = sessionStorage.getItem('momo_payment_order_id')
+        const depositOrderId = sessionStorage.getItem('deposit_order_id')
 
-        // Cập nhật trạng thái đơn hàng thành CANCELLED
-        await orderStore.cancelOrderStore(orderId)
-        console.log('✅ Đã cập nhật trạng thái đơn hàng thành CANCELLED:', orderId)
+        // Ưu tiên lấy orderId từ sessionStorage (nếu có)
+        let orderIdToCancel = momoOrderId || depositOrderId || createdOrderId.value
 
-        // Cập nhật payment status thành FAILED nếu có payment
+        if (!orderIdToCancel) {
+            console.log('ℹ️ Không có orderId để hủy')
+            return
+        }
+
+        const orderIdNum = parseInt(orderIdToCancel)
+        if (isNaN(orderIdNum)) {
+            console.log('⚠️ OrderId không hợp lệ:', orderIdToCancel)
+            return
+        }
+
+        console.log('🔄 Tự động hủy đơn hàng khi rời khỏi trang thanh toán MoMo:', orderIdNum)
+
+        // Hủy đơn hàng
         try {
-            const paymentResponse = await paymentStore.getPaymentByOrderIdStore(orderId)
+            await orderStore.cancelOrderStore(orderIdNum)
+            console.log('✅ Đã hủy đơn hàng:', orderIdNum)
+        } catch (cancelError) {
+            console.error('❌ Lỗi khi hủy đơn hàng:', cancelError)
+        }
+
+        // Cập nhật payment status thành FAILED
+        try {
+            const paymentResponse = await paymentStore.getPaymentByOrderIdStore(orderIdNum)
             if (paymentResponse?.data?.success && paymentResponse?.data?.data) {
                 const payment = paymentResponse.data.data
                 const paymentId = payment.payment_id || payment.id || payment.paymentId
-
                 if (paymentId) {
-                    console.log('💳 Đang cập nhật payment status thành FAILED:', paymentId)
                     await paymentStore.updatePaymentStatusStore(paymentId, 'FAILED')
                     console.log('✅ Đã cập nhật payment status thành FAILED')
                 }
@@ -318,49 +335,74 @@ const handleDeleteOrderOnLeave = async (orderId) => {
             console.error('❌ Lỗi khi cập nhật payment status:', paymentError)
         }
 
-        // Reset payment data
+        // Xóa flags
+        sessionStorage.removeItem('momo_payment_order_id')
+        sessionStorage.removeItem('momo_payment_timestamp')
+        sessionStorage.removeItem('deposit_order_id')
         createdOrderId.value = null
     } catch (error) {
         console.error('❌ Lỗi khi hủy đơn hàng:', error)
     }
 }
 
-
-// Sử dụng onBeforeRouteLeave để detect navigation (chặn tất cả navigation khi đang thanh toán MOMO)
-onBeforeRouteLeave((to, from, next) => {
-    // Chặn TẤT CẢ navigation khi đang trong quá trình thanh toán MOMO
-    // KHÔNG chặn khi đang navigate vào trang này (from.name sẽ là undefined hoặc tên trang khác)
-    if (isPaymentActive()) {
-        console.log('⚠️ onBeforeRouteLeave: Đang chặn navigation vì đang thanh toán MOMO, to:', to.path)
-        pendingNavigation.value = { to, next }
-        showConfirmModal.value = true
-        // Không gọi next() để chặn navigation
-    } else {
-        console.log('✅ onBeforeRouteLeave: Cho phép navigation')
-        next()
+// Sử dụng onBeforeRouteLeave để tự động hủy đơn hàng khi rời khỏi trang thanh toán MOMO
+onBeforeRouteLeave(async (to, from, next) => {
+    // Nếu đang trong quá trình thanh toán MOMO, tự động hủy đơn hàng
+    if (isMoMoPaymentActive()) {
+        console.log('⚠️ onBeforeRouteLeave: Đang rời khỏi trang thanh toán MOMO, tự động hủy đơn hàng, to:', to.path)
+        await cancelOrderOnMoMoLeave()
     }
+    // Cho phép navigation
+    next()
 })
 
-const handleConfirmLeave = async () => {
-    showConfirmModal.value = false
+// Xử lý khi user đóng tab/browser - Tự động hủy đơn hàng ngay lập tức
+const handleBeforeUnload = () => {
+    if (isMoMoPaymentActive()) {
+        console.log('⚠️ beforeunload: User đang đóng tab/browser trong quá trình thanh toán MoMo - Tự động hủy đơn hàng')
 
-    // Nếu đã tạo đơn hàng, xóa đơn hàng trước khi rời khỏi
-    if (createdOrderId.value && paymentMethod.value === 'MOMO') {
-        await handleDeleteOrderOnLeave(createdOrderId.value)
-    }
+        // Lấy orderId để hủy
+        const momoOrderId = sessionStorage.getItem('momo_payment_order_id')
+        const depositOrderId = sessionStorage.getItem('deposit_order_id')
+        const orderIdToCancel = momoOrderId || depositOrderId || createdOrderId.value
 
-    // Tiếp tục navigation
-    if (pendingNavigation.value && pendingNavigation.value.next) {
-        pendingNavigation.value.next()
-        pendingNavigation.value = null
-    }
-}
+        if (orderIdToCancel) {
+            const orderIdNum = parseInt(orderIdToCancel)
+            if (isNaN(orderIdNum)) {
+                return
+            }
 
-const handleCancelLeave = () => {
-    showConfirmModal.value = false
-    if (pendingNavigation.value && pendingNavigation.value.next) {
-        pendingNavigation.value.next(false)
-        pendingNavigation.value = null
+            // Đánh dấu rằng cần hủy đơn hàng khi quay lại (backup)
+            sessionStorage.setItem('cancel_order_on_return', orderIdToCancel.toString())
+
+            // Hủy đơn hàng ngay lập tức bằng cách gửi request với keepalive
+            const token = authStore.accessToken
+            if (!token) {
+                return
+            }
+
+            try {
+                // Gửi request hủy đơn hàng ngay lập tức (quan trọng nhất)
+                fetch(`${window.location.origin}/api/orders/${orderIdNum}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: 'CANCELLED' }),
+                    keepalive: true // Quan trọng: giữ kết nối ngay cả khi tab đang đóng
+                }).catch(err => {
+                    console.error('❌ Lỗi khi hủy đơn hàng:', err)
+                })
+
+                console.log('📤 Đã gửi request hủy đơn hàng với keepalive khi đóng tab')
+                // Payment status sẽ được cập nhật khi user quay lại (thông qua cancelOrderOnMoMoLeave)
+            } catch (error) {
+                console.error('❌ Lỗi khi gửi request hủy đơn hàng:', error)
+                // Đánh dấu để xử lý sau nếu request thất bại
+                sessionStorage.setItem('cancel_order_on_return', orderIdToCancel.toString())
+            }
+        }
     }
 }
 
@@ -474,8 +516,17 @@ const checkOrderAndPaymentStatus = async () => {
             if (orderResponse?.data?.success && orderResponse?.data?.data) {
                 const order = orderResponse.data.data
                 const orderStatus = order.status
+                const depositRequired = order.deposit_required || false
+                const deposit = order.deposit || null
 
-                console.log('📦 Trạng thái đơn hàng:', orderStatus)
+                console.log('📦 Trạng thái đơn hàng:', orderStatus, 'depositRequired:', depositRequired, 'deposit:', deposit)
+
+                // Nếu cần đặt cọc và chưa đặt cọc, không redirect
+                if (depositRequired && (!deposit || !deposit.paid)) {
+                    console.log('💰 Đơn hàng cần đặt cọc, không redirect để hiển thị modal')
+                    // Không redirect, để modal có thể hiển thị
+                    return true
+                }
 
                 // Nếu đơn hàng đã thành công (CONFIRMED, DELIVERED) hoặc thất bại (CANCELLED)
                 if (orderStatus === 'CONFIRMED' || orderStatus === 'DELIVERED' || orderStatus === 'CANCELLED') {
@@ -547,6 +598,62 @@ onMounted(async () => {
     if (!canAccess) {
         // Đã redirect trong checkOrderAndPaymentStatus, không cần làm gì thêm
         return
+    }
+
+    // Thêm event listener cho beforeunload
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Xử lý khi tab trở nên visible (user quay lại từ MoMo)
+    const handleVisibilityChange = async () => {
+        if (document.visibilityState === 'visible' && isMoMoPaymentActive()) {
+            console.log('👁️ Tab trở nên visible, kiểm tra trạng thái thanh toán MoMo')
+            // Kiểm tra xem payment đã thành công chưa
+            const momoOrderId = sessionStorage.getItem('momo_payment_order_id')
+            const depositOrderId = sessionStorage.getItem('deposit_order_id')
+            const orderIdToCheck = momoOrderId || depositOrderId || createdOrderId.value
+
+            if (orderIdToCheck) {
+                try {
+                    const orderIdNum = parseInt(orderIdToCheck)
+                    if (!isNaN(orderIdNum)) {
+                        // Kiểm tra trạng thái payment
+                        const paymentResponse = await paymentStore.getPaymentByOrderIdStore(orderIdNum)
+                        if (paymentResponse?.data?.success && paymentResponse?.data?.data) {
+                            const payment = paymentResponse.data.data
+                            const paymentStatus = payment.status || payment.payment_status
+
+                            // Nếu payment chưa thành công (vẫn PROCESSING), hủy đơn hàng
+                            if (paymentStatus === 'PROCESSING') {
+                                console.log('⚠️ Payment vẫn đang PROCESSING, hủy đơn hàng')
+                                await cancelOrderOnMoMoLeave()
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Lỗi khi kiểm tra trạng thái payment:', error)
+                }
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Lưu reference để cleanup
+    window._paymentPageVisibilityHandler = handleVisibilityChange
+
+    // Kiểm tra xem có cần hủy đơn hàng khi quay lại không (từ beforeunload)
+    const cancelOrderOnReturn = sessionStorage.getItem('cancel_order_on_return')
+    if (cancelOrderOnReturn) {
+        console.log('⚠️ Phát hiện flag cancel_order_on_return, đang hủy đơn hàng:', cancelOrderOnReturn)
+        sessionStorage.removeItem('cancel_order_on_return')
+        const orderIdNum = parseInt(cancelOrderOnReturn)
+        if (!isNaN(orderIdNum)) {
+            try {
+                await cancelOrderOnMoMoLeave()
+            } catch (error) {
+                console.error('❌ Lỗi khi hủy đơn hàng từ flag:', error)
+            }
+        }
     }
 
     // Kiểm tra và xử lý khi user quay lại từ MoMo payment
@@ -705,18 +812,54 @@ const totalQuantity = computed(() => {
     return orderItems.value.reduce((sum, item) => sum + (item.quantity || 0), 0)
 })
 
-// Tính phí ship theo số lượng sản phẩm
+// Tính phí ship theo thành phố
 const shippingFee = computed(() => {
-    const quantity = totalQuantity.value
-    if (quantity <= 5) {
-        return 50000
-    } else if (quantity <= 10) {
-        return 70000
-    } else if (quantity <= 15) {
-        return 100000
-    } else {
-        return 100000 // > 15 sản phẩm
+    // Lấy city_id từ sessionStorage hoặc shippingInfo
+    let cityId = null
+    let cityName = null
+
+    // Thử lấy từ sessionStorage trước
+    const shippingCityId = sessionStorage.getItem('shipping_city_id')
+    if (shippingCityId) {
+        cityId = parseInt(shippingCityId)
+    } else if (shippingInfo.value?.city_id) {
+        cityId = parseInt(shippingInfo.value.city_id)
     }
+
+    // Lấy tên thành phố từ địa chỉ nếu có
+    const address = shippingInfo.value?.address || sessionStorage.getItem('shipping_address') || ''
+    if (address) {
+        const addressLower = address.toLowerCase()
+        if (addressLower.includes('hồ chí minh') || addressLower.includes('ho chi minh') || addressLower.includes('hcm') || addressLower.includes('tp. hồ chí minh') || addressLower.includes('tp.hcm')) {
+            cityName = 'hcm'
+        } else if (addressLower.includes('bà rịa') || addressLower.includes('vũng tàu') || addressLower.includes('ba ria') || addressLower.includes('vung tau') || addressLower.includes('br-vt')) {
+            cityName = 'brvt'
+        }
+    }
+
+    // Tính phí ship dựa vào city_id hoặc tên thành phố
+    // Thành phố Hồ Chí Minh: 70k
+    // Bà Rịa - Vũng Tàu: 100k
+
+    // Kiểm tra theo city_id trước (nếu có)
+    if (cityId) {
+        // ID 1 là HCM, ID 2 là BR-VT
+        if (cityId === 1) {
+            return 70000 // Hồ Chí Minh
+        } else if (cityId === 2) {
+            return 100000 // Bà Rịa - Vũng Tàu
+        }
+    }
+
+    // Nếu không có city_id, kiểm tra theo tên thành phố trong địa chỉ
+    if (cityName === 'hcm') {
+        return 70000 // Hồ Chí Minh
+    } else if (cityName === 'brvt') {
+        return 100000 // Bà Rịa - Vũng Tàu
+    }
+
+    // Mặc định: Hồ Chí Minh (70k) nếu không xác định được
+    return 70000
 })
 
 // Giảm giá tự động theo số lượng sản phẩm - Đã tắt
@@ -724,119 +867,11 @@ const autoDiscountPercent = computed(() => {
     return 0 // Tắt auto discount
 })
 
-const applyDiscountCode = async () => {
-    if (!discountCode.value.trim()) {
-        errorMessage.value = 'Vui lòng nhập mã giảm giá!'
-        return
-    }
-
-    isLoadingDiscount.value = true
-    errorMessage.value = ''
-
-    try {
-        const code = discountCode.value.trim() // Giữ nguyên hoa thường
-
-        // Kiểm tra nếu đã đủ điều kiện miễn phí vận chuyển tự động
-        // (15 sản phẩm và >= 4.000.000 VND) thì không được áp dụng mã giảm giá khác
-        if (totalQuantity.value >= 15 && subTotal.value >= 4000000) {
-            errorMessage.value = 'Đơn hàng của bạn đã được miễn phí vận chuyển, không thể áp dụng mã giảm giá khác!'
-            isLoadingDiscount.value = false
-            return
-        }
-
-        // Kiểm tra nếu đã có mã giảm giá được áp dụng
-        // Mỗi đơn chỉ được áp dụng 1 mã giảm giá duy nhất
-        // Nếu đã có mã, sẽ tự động thay thế bằng mã mới
-        const oldDiscountCode = appliedSpecialDiscount.value?.code
-        if (oldDiscountCode && oldDiscountCode !== code) {
-            // Mã cũ sẽ tự động bị thay thế bởi mã mới
-            // Không cần thông báo vì đây là hành vi mong muốn
-        }
-
-        // Kiểm tra mã giảm giá đặc biệt (phân biệt hoa thường)
-        if (code === 'COBALA100K') {
-            if (subTotal.value >= 1500000) {
-                // Áp dụng mã mới (tự động thay thế mã cũ nếu có)
-                appliedSpecialDiscount.value = {
-                    code: 'COBALA100K',
-                    type: 'amount',
-                    value: 100000
-                }
-                discountCode.value = ''
-            } else {
-                errorMessage.value = 'Mã COBALA100K chỉ áp dụng cho đơn hàng từ 1.500.000 VND trở lên!'
-                return
-            }
-        } else if (code === 'XANH10') {
-            if (subTotal.value >= 500000) {
-                // Áp dụng mã mới (tự động thay thế mã cũ nếu có)
-                appliedSpecialDiscount.value = {
-                    code: 'XANH10',
-                    type: 'percent',
-                    value: 10
-                }
-                discountCode.value = ''
-            } else {
-                errorMessage.value = 'Mã XANH10 chỉ áp dụng cho đơn hàng từ 500.000 VND trở lên!'
-                return
-            }
-
-        } else if (code === 'FREESHIP') {
-            // Áp dụng mã mới (tự động thay thế mã cũ nếu có)
-            appliedSpecialDiscount.value = {
-                code: 'FREESHIP',
-                type: 'freeship',
-                value: 0
-            }
-            discountCode.value = ''
-        } else {
-            // Kiểm tra mã giảm giá từ database (phân biệt hoa thường)
-            const discount = availableDiscounts.value.find(
-                d => d.discount_code === code
-            )
-
-            if (!discount) {
-                errorMessage.value = 'Mã giảm giá không hợp lệ!'
-                return
-            }
-
-            // Xác định loại giảm giá dựa trên discount.type từ database
-            if (discount.type === 'PERCENT') {
-                // Giảm giá theo phần trăm (tự động thay thế mã cũ nếu có)
-                appliedSpecialDiscount.value = {
-                    code: discount.discount_code,
-                    type: 'percent',
-                    value: Number(discount.value) || 0,
-                    discount_id: discount.discount_id
-                }
-            } else if (discount.type === 'CASH') {
-                // Giảm giá cố định (tiền mặt) (tự động thay thế mã cũ nếu có)
-                appliedSpecialDiscount.value = {
-                    code: discount.discount_code,
-                    type: 'amount',
-                    value: Number(discount.value) || 0,
-                    discount_id: discount.discount_id
-                }
-            } else {
-                errorMessage.value = 'Loại mã giảm giá không hợp lệ!'
-                return
-            }
-            discountCode.value = ''
-        }
-    } catch (error) {
-        errorMessage.value = 'Có lỗi xảy ra khi áp dụng mã giảm giá!'
-        console.log(error)
-    } finally {
-        isLoadingDiscount.value = false
-    }
-}
-
 const removeDiscount = () => {
     appliedSpecialDiscount.value = null
-    discountCode.value = ''
 }
 
-// Áp dụng mã giảm giá khi click vào mã có sẵn
+// Áp dụng mã giảm giá khi click vào mã có sẵn (từ database)
 const applyAvailableDiscount = (discount) => {
     // Nếu click vào mã đã được áp dụng, remove nó
     if (appliedSpecialDiscount.value?.code === discount.code) {
@@ -844,22 +879,24 @@ const applyAvailableDiscount = (discount) => {
         return
     }
 
-    // Kiểm tra nếu đã đủ điều kiện miễn phí vận chuyển tự động
-    if (totalQuantity.value >= 15 && subTotal.value >= 4000000) {
-        errorMessage.value = 'Đơn hàng của bạn đã được miễn phí vận chuyển, không thể áp dụng mã giảm giá khác!'
-        return
+    // Kiểm tra điều kiện quantity: đơn hàng phải đáp ứng số lượng tối thiểu
+    if (discount.quantity !== undefined && discount.quantity > 0) {
+        const orderQuantity = totalQuantity.value
+        if (orderQuantity < discount.quantity) {
+            errorMessage.value = `Mã ${discount.code} chỉ áp dụng cho đơn hàng từ ${discount.quantity} sản phẩm trở lên!`
+            return
+        }
     }
 
-    // Áp dụng mã giảm giá
+    // Áp dụng mã giảm giá từ database
     appliedSpecialDiscount.value = {
         code: discount.code,
         type: discount.type,
         value: discount.value,
-        discount_id: null // Mã hardcode không có discount_id
+        discount_id: discount.discount_id || null
     }
-    discountCode.value = discount.code
     errorMessage.value = ''
-    console.log('✅ Applied discount code:', discount.code)
+    console.log('✅ Applied discount code from database:', discount.code)
 }
 
 // Calculate prices
@@ -876,70 +913,65 @@ const autoDiscountAmount = computed(() => {
     return (subTotal.value * autoDiscountPercent.value) / 100
 })
 
-// Giảm giá từ mã giảm giá đặc biệt
+// Giảm giá từ mã giảm giá (từ database)
 const specialDiscountAmount = computed(() => {
     if (!appliedSpecialDiscount.value) return 0
 
     const discount = appliedSpecialDiscount.value
     if (discount.type === 'amount') {
-        // Giảm giá cố định (ví dụ: 100.000 VND)
+        // Giảm giá cố định (CASH)
         return Number(discount.value) || 0
     } else if (discount.type === 'percent') {
-        // Giảm giá theo phần trăm
+        // Giảm giá theo phần trăm (PERCENT)
         const percent = Number(discount.value) || 0
         return (subTotal.value * percent) / 100
-    } else if (discount.type === 'freeship') {
-        return 0 // Freeship được xử lý riêng
     }
     return 0
 })
 
 // Lấy phần trăm giảm giá từ mã (để hiển thị)
-const specialDiscountPercent = computed(() => {
-    if (!appliedSpecialDiscount.value) return null
-    if (appliedSpecialDiscount.value.type === 'percent') {
-        return Number(appliedSpecialDiscount.value.value) || 0
-    }
-    return null
-})
+// const specialDiscountPercent = computed(() => {
+//     if (!appliedSpecialDiscount.value) return null
+//     if (appliedSpecialDiscount.value.type === 'percent') {
+//         return Number(appliedSpecialDiscount.value.value) || 0
+//     }
+//     return null
+// })
 
-// Kiểm tra các mã giảm giá có thể áp dụng dựa trên điều kiện
+// Lọc các mã giảm giá có thể áp dụng từ database dựa trên số lượng sản phẩm
 const availableDiscountCodes = computed(() => {
-    const available = []
-    const total = subTotal.value
+    const orderQuantity = totalQuantity.value // Tổng số lượng sản phẩm trong đơn hàng
 
-    // Kiểm tra điều kiện COBALA100K: >= 1.500.000 VND
-    if (total >= 1500000) {
-        available.push({
-            code: 'COBALA100K',
-            type: 'amount',
-            value: 100000,
-            description: 'Giảm 100.000 VND cho đơn hàng từ 1.500.000 VND'
-        })
-    }
+    // Lọc các mã giảm giá từ database: số lượng sản phẩm trong đơn hàng >= quantity tối thiểu
+    const eligibleDiscounts = (availableDiscounts.value || []).filter(discount => {
+        const minQuantity = Number(discount.quantity) || 0
+        return orderQuantity >= minQuantity
+    })
 
-    // Kiểm tra điều kiện XANH10: >= 500.000 VND
-    if (total >= 500000) {
-        available.push({
-            code: 'XANH10',
-            type: 'percent',
-            value: 10,
-            description: 'Giảm 10% cho đơn hàng từ 500.000 VND'
-        })
-    }
+    // Chuyển đổi discount từ database sang format phù hợp với UI
+    return eligibleDiscounts.map(discount => {
+        const discountType = discount.type === 'PERCENT' ? 'percent' :
+            discount.type === 'CASH' ? 'amount' :
+                discount.type?.toLowerCase() || 'amount'
 
-    return available
+        const discountValue = Number(discount.value) || 0
+        const minQuantity = Number(discount.quantity) || 0
+
+        return {
+            code: discount.discount_code,
+            type: discountType,
+            value: discountValue,
+            discount_id: discount.discount_id,
+            discount_name: discount.discount_name,
+            quantity: minQuantity, // Số lượng sản phẩm tối thiểu
+            description: discount.discount_name ||
+                `Giảm giá ${discountType === 'percent' ? `${discountValue}%` : formatPrice(discountValue)} cho đơn hàng từ ${minQuantity} sản phẩm`
+        }
+    })
 })
 
-// Phí ship sau khi áp dụng FREESHIP
+// Phí ship
 const finalShippingFee = computed(() => {
-    // FreeShip: Đơn hàng từ 15 sản phẩm trở lên với tổng giá trị đơn hàng >= 4.000.000
-    if (totalQuantity.value >= 15 && subTotal.value >= 4000000) {
-        return 0
-    }
-    if (appliedSpecialDiscount.value?.type === 'freeship') {
-        return 0
-    }
     return shippingFee.value
 })
 
@@ -951,6 +983,90 @@ const totalDiscountAmount = computed(() => {
 // Tổng tiền cuối cùng
 const finalTotal = computed(() => {
     return subTotal.value + finalShippingFee.value - totalDiscountAmount.value
+})
+
+// Kiểm tra có cần đặt cọc không (COD + tổng số lượng >= 10)
+const needsDeposit = computed(() => {
+    return paymentMethod.value === 'COD' && totalQuantity.value >= 10
+})
+
+// Tính số tiền cần đặt cọc (50% tổng tiền, KHÔNG tính phí ship)
+// Deposit = 50% của (Tạm tính - Tổng giảm giá)
+// KHÔNG bao gồm phí ship
+const depositAmount = computed(() => {
+    if (!needsDeposit.value) return 0
+
+    // Tính số tiền trước khi cộng phí ship = Tạm tính - Tổng giảm giá
+    const amountBeforeShipping = subTotal.value - totalDiscountAmount.value
+
+    // Đặt cọc 50% số tiền trên (KHÔNG bao gồm phí ship)
+    return Math.round(amountBeforeShipping * 0.5)
+})
+
+// Build orderData để truyền vào DepositModal
+const depositOrderData = computed(() => {
+    if (!needsDeposit.value || orderItems.value.length === 0) return null
+
+    // Get note from shipping info
+    const orderNote = shippingInfo.value.note || ''
+
+    // Prepare order items
+    const items = orderItems.value.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price_at_order: item.price,
+        sub_total: (item.price || 0) * item.quantity,
+        note: orderNote
+    }))
+
+    // Get payment method ID
+    const paymentMethodId = getPaymentMethodId(paymentMethod.value)
+
+    // Lấy thông tin giao hàng từ sessionStorage
+    const shippingName = sessionStorage.getItem('shipping_name') || ''
+    const shippingAddress = sessionStorage.getItem('shipping_address') || ''
+    const shippingPhone = sessionStorage.getItem('shipping_phone') || ''
+
+    // Nếu không có shipping info từ sessionStorage, thử lấy từ shippingInfo (nếu có)
+    let finalShippingName = shippingName || shippingInfo.value?.username || ''
+    let finalShippingAddress = shippingAddress || shippingInfo.value?.address || ''
+    let finalShippingPhone = shippingPhone || shippingInfo.value?.phone_number || ''
+
+    // Nếu vẫn không có, thử lấy từ userInfo
+    if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+        if (userStore.userInfo) {
+            finalShippingName = finalShippingName || userStore.userInfo.username || ''
+            finalShippingAddress = finalShippingAddress || userStore.userInfo.address || ''
+            finalShippingPhone = finalShippingPhone || userStore.userInfo.phone_number || ''
+        }
+    }
+
+    // Nếu không có đủ thông tin shipping, trả về null
+    if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+        return null
+    }
+
+    // Prepare order data
+    return {
+        discount_id: appliedSpecialDiscount.value?.discount_id || null,
+        discount_code: appliedSpecialDiscount.value?.code || null,
+        total: subTotal.value,
+        shipping_fee: finalShippingFee.value,
+        auto_discount_percent: autoDiscountPercent.value,
+        auto_discount_amount: autoDiscountAmount.value,
+        discount_amount: specialDiscountAmount.value,
+        total_discount_amount: totalDiscountAmount.value,
+        final_total: finalTotal.value,
+        shipping_name: finalShippingName,
+        shipping_address: finalShippingAddress,
+        shipping_phone: finalShippingPhone,
+        payment: {
+            method_id: paymentMethodId,
+            amount: finalTotal.value,
+            status: 'PROCESSING'
+        },
+        items: items
+    }
 })
 
 const formatPrice = (price) => {
@@ -989,6 +1105,22 @@ const handleCreateOrder = async () => {
 
     if (orderItems.value.length === 0) {
         errorMessage.value = 'Không có sản phẩm nào để đặt hàng!'
+        return
+    }
+
+    // Nếu cần đặt cọc (COD + 10+ sản phẩm), chỉ hiển thị modal, không tạo đơn
+    if (needsDeposit.value) {
+        console.log('💰 Cần đặt cọc, hiển thị modal đặt cọc trước khi tạo đơn')
+        // Tạo depositPayment object từ tính toán trước
+        currentDepositPayment.value = {
+            amount: depositAmount.value,
+            // payUrl và qrCodeUrl sẽ được tạo khi user bấm "Thanh toán cọc"
+            payUrl: null,
+            qrCodeUrl: null,
+            deeplink: null
+        }
+        currentDeposit.value = null
+        showDepositModal.value = true
         return
     }
 
@@ -1096,22 +1228,38 @@ const handleCreateOrder = async () => {
             console.log('Order creation response:', response.data)
 
             if (response.data.success) {
-                // Lấy order_id từ response
-                const orderId = response.data.data?.order_id || response.data.order_id || response.data.data?.id
+                // Lấy order data từ response
+                const orderData = response.data.data
+                const orderId = orderData?.order_id || response.data.order_id || orderData?.id
 
                 if (!orderId) {
                     throw new Error('Không thể lấy order ID từ response!')
                 }
 
+                // Lưu deposit fields từ response
+                const depositRequired = orderData?.deposit_required || false
+                const deposit = orderData?.deposit || null
+                const depositPayment = orderData?.deposit_payment || null
+
+                console.log('Deposit info from response:', {
+                    depositRequired,
+                    deposit,
+                    depositPayment
+                })
+
+                // Lưu deposit info vào order store
+                if (orderData) {
+                    orderStore.currentOrder = {
+                        ...orderData,
+                        deposit_required: depositRequired,
+                        deposit: deposit,
+                        deposit_payment: depositPayment
+                    }
+                }
+
                 // Payment đã được tạo tự động bởi backend từ orderData.payment
                 // Không cần tạo payment ở frontend nữa để tránh duplicate
                 console.log('Payment should be created by backend from orderData.payment')
-
-                // Đánh dấu đơn hàng đã hoàn thành
-                isOrderCompleted.value = true
-                // Lưu flag vào sessionStorage để ngăn user back về trang thanh toán
-                sessionStorage.setItem('order_completed', 'true')
-                sessionStorage.setItem('completed_order_id', orderId.toString())
 
                 console.log('Order created successfully, orderId:', orderId)
 
@@ -1119,19 +1267,43 @@ const handleCreateOrder = async () => {
                 sessionStorage.removeItem('shipping_name')
                 sessionStorage.removeItem('shipping_address')
                 sessionStorage.removeItem('shipping_phone')
+                sessionStorage.removeItem('shipping_city_id')
 
                 // Nếu thanh toán MOMO, lưu orderId và hiển thị QR code
                 if (paymentMethod.value === 'MOMO') {
                     createdOrderId.value = orderId
+                    // Đánh dấu đơn hàng đã hoàn thành cho MOMO
+                    isOrderCompleted.value = true
+                    sessionStorage.setItem('order_completed', 'true')
+                    sessionStorage.setItem('completed_order_id', orderId.toString())
                     console.log('MOMO payment, showing QR code')
                 } else {
-                    // Nếu COD, thay thế payment page bằng cart page, rồi chuyển về trang đơn hàng
-                    // Để khi bấm back từ orders-page sẽ về cart thay vì payment
-                    console.log('COD payment, redirecting to orders page')
-                    router.replace('/cart')
-                    // Sử dụng nextTick để đảm bảo replace cart đã hoàn thành trước khi push orders-page
-                    await new Promise(resolve => setTimeout(resolve, 100))
-                    router.push('/orders-page')
+                    // Nếu COD, kiểm tra xem có cần đặt cọc không
+                    if (depositRequired && (!deposit || !deposit.paid) && depositPayment) {
+                        // Hiển thị modal đặt cọc - KHÔNG set isOrderCompleted để không redirect
+                        createdOrderId.value = orderId
+                        currentDeposit.value = deposit
+                        currentDepositPayment.value = depositPayment
+                        showDepositModal.value = true
+                        console.log('COD payment requires deposit, showing deposit modal')
+                        console.log('Deposit modal state:', {
+                            showDepositModal: showDepositModal.value,
+                            deposit: currentDeposit.value,
+                            depositPayment: currentDepositPayment.value,
+                            orderId: createdOrderId.value
+                        })
+                        // KHÔNG set order_completed để modal có thể hiển thị
+                    } else {
+                        // Nếu không cần đặt cọc, đánh dấu hoàn thành và redirect như bình thường
+                        isOrderCompleted.value = true
+                        sessionStorage.setItem('order_completed', 'true')
+                        sessionStorage.setItem('completed_order_id', orderId.toString())
+                        console.log('COD payment, redirecting to orders page')
+                        router.replace('/cart')
+                        // Sử dụng nextTick để đảm bảo replace cart đã hoàn thành trước khi push orders-page
+                        await new Promise(resolve => setTimeout(resolve, 100))
+                        router.push('/orders-page')
+                    }
                 }
 
                 // Reload cart to reflect changes (sau khi đã redirect hoặc set createdOrderId)
@@ -1161,6 +1333,204 @@ const handleCreateOrder = async () => {
 const handleCancel = () => {
     router.push('/cart')
 }
+
+// Xử lý khi DepositModal tạo đơn hàng thành công
+const handleOrderCreatedFromDeposit = (orderData) => {
+    console.log('✅ Order created from DepositModal:', orderData)
+    createdOrderId.value = orderData.orderId
+    currentDeposit.value = orderData.deposit
+    currentDepositPayment.value = orderData.depositPayment
+    // DepositModal đã tự mở link thanh toán, không cần làm gì thêm
+}
+
+// Tạo đơn hàng khi user bấm "Thanh toán cọc" trong modal (fallback nếu DepositModal không tự xử lý)
+const handleCreateOrderForDeposit = async () => {
+    const token = authStore.accessToken
+    if (!token) {
+        errorMessage.value = 'Vui lòng đăng nhập lại!'
+        return
+    }
+
+    if (orderItems.value.length === 0) {
+        errorMessage.value = 'Không có sản phẩm nào để đặt hàng!'
+        return
+    }
+
+    console.log('💰 Creating order for deposit payment...', {
+        orderItemsCount: orderItems.value.length,
+        paymentMethod: paymentMethod.value,
+        finalTotal: finalTotal.value,
+        depositAmount: depositAmount.value
+    })
+
+    try {
+        await executeAsync(async () => {
+            // Get note from shipping info
+            const orderNote = shippingInfo.value.note || ''
+
+            // Prepare order items
+            const items = orderItems.value.map(item => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                price_at_order: item.price,
+                sub_total: (item.price || 0) * item.quantity,
+                note: orderNote
+            }))
+
+            // Get payment method ID
+            const paymentMethodId = getPaymentMethodId(paymentMethod.value)
+
+            // Lấy thông tin giao hàng từ sessionStorage
+            const shippingName = sessionStorage.getItem('shipping_name') || ''
+            const shippingAddress = sessionStorage.getItem('shipping_address') || ''
+            const shippingPhone = sessionStorage.getItem('shipping_phone') || ''
+
+            // Nếu không có shipping info từ sessionStorage, thử lấy từ shippingInfo (nếu có)
+            let finalShippingName = shippingName || shippingInfo.value?.username || ''
+            let finalShippingAddress = shippingAddress || shippingInfo.value?.address || ''
+            let finalShippingPhone = shippingPhone || shippingInfo.value?.phone_number || ''
+
+            // Nếu vẫn không có, thử lấy từ userInfo
+            if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+                if (userStore.userInfo) {
+                    finalShippingName = finalShippingName || userStore.userInfo.username || ''
+                    finalShippingAddress = finalShippingAddress || userStore.userInfo.address || ''
+                    finalShippingPhone = finalShippingPhone || userStore.userInfo.phone_number || ''
+                }
+            }
+
+            // Validate: Đảm bảo có đủ thông tin shipping trước khi tạo order
+            if (!finalShippingName || !finalShippingAddress || !finalShippingPhone) {
+                throw new Error('Thiếu thông tin giao hàng. Vui lòng quay lại trang xác nhận thông tin giao hàng!')
+            }
+
+            // Prepare order data
+            const orderData = {
+                discount_id: appliedSpecialDiscount.value?.discount_id || null,
+                discount_code: appliedSpecialDiscount.value?.code || null,
+                total: subTotal.value,
+                shipping_fee: finalShippingFee.value,
+                auto_discount_percent: autoDiscountPercent.value,
+                auto_discount_amount: autoDiscountAmount.value,
+                discount_amount: specialDiscountAmount.value,
+                total_discount_amount: totalDiscountAmount.value,
+                final_total: finalTotal.value,
+                shipping_name: finalShippingName,
+                shipping_address: finalShippingAddress,
+                shipping_phone: finalShippingPhone,
+                payment: {
+                    method_id: paymentMethodId,
+                    amount: finalTotal.value,
+                    status: 'PROCESSING'
+                },
+                items: items
+            }
+
+            console.log('📤 Creating order for deposit...')
+
+            const response = await orderStore.createNewOrder(orderData)
+
+            if (response.data.success) {
+                // Lấy order data từ response
+                const orderDataFromResponse = response.data.data
+                const orderId = orderDataFromResponse?.order_id || response.data.order_id || orderDataFromResponse?.id
+
+                if (!orderId) {
+                    throw new Error('Không thể lấy order ID từ response!')
+                }
+
+                // Lưu deposit fields từ response
+                const depositRequired = orderDataFromResponse?.deposit_required || false
+                const deposit = orderDataFromResponse?.deposit || null
+                const depositPayment = orderDataFromResponse?.deposit_payment || null
+
+                console.log('✅ Order created for deposit, orderId:', orderId)
+                console.log('💰 Deposit info:', {
+                    depositRequired,
+                    deposit,
+                    depositPayment
+                })
+
+                // Set orderId và deposit info
+                createdOrderId.value = orderId
+                currentDeposit.value = deposit
+                currentDepositPayment.value = depositPayment
+
+                // Xóa shipping info từ sessionStorage
+                sessionStorage.removeItem('shipping_name')
+                sessionStorage.removeItem('shipping_address')
+                sessionStorage.removeItem('shipping_phone')
+                sessionStorage.removeItem('shipping_city_id')
+
+                // Reload cart
+                const userId = authStore.userId
+                if (userId) {
+                    cartStore.loadCartFromBackend(userId).catch(err => {
+                        console.error('Error reloading cart:', err)
+                    })
+                }
+
+                // Mở link thanh toán MoMo
+                if (depositPayment?.payUrl || depositPayment?.deeplink) {
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                    const paymentUrl = isMobile && depositPayment.deeplink
+                        ? depositPayment.deeplink
+                        : depositPayment.payUrl
+
+                    if (paymentUrl) {
+                        // Lưu orderId vào sessionStorage để xử lý redirect
+                        sessionStorage.setItem('deposit_order_id', orderId.toString())
+
+                        // Mở link thanh toán
+                        window.location.href = paymentUrl
+                    } else {
+                        throw new Error('Không tìm thấy link thanh toán')
+                    }
+                } else {
+                    throw new Error('Không tìm thấy thông tin thanh toán đặt cọc')
+                }
+            } else {
+                throw new Error(response.data.message || 'Tạo đơn hàng thất bại!')
+            }
+        }, {
+            defaultErrorMessage: 'Không thể tạo đơn hàng để đặt cọc!',
+            onError: (error) => {
+                console.error('Order creation error for deposit:', error)
+                errorMessage.value = error.response?.data?.message || error.message
+            }
+        })
+    } catch (error) {
+        console.error('Unexpected error in handleCreateOrderForDeposit:', error)
+        errorMessage.value = error.message || 'Có lỗi xảy ra khi tạo đơn hàng để đặt cọc!'
+    }
+}
+
+// Deposit modal handlers
+const handleCloseDepositModal = async () => {
+    console.log('🔄 Đóng modal đặt cọc')
+    showDepositModal.value = false
+
+    // Khi hủy modal, chưa có đơn hàng nào được tạo (vì chỉ tạo khi bấm "Xác nhận đặt cọc")
+    // Chỉ cần reset state để quay về trang thanh toán bình thường
+    currentDeposit.value = null
+    currentDepositPayment.value = null
+
+    // Không reset createdOrderId vì chưa có đơn hàng nào được tạo ở đây
+    // createdOrderId chỉ được set khi bấm "Xác nhận đặt cọc"
+    console.log('✅ Đã reset state, quay về trang thanh toán')
+}
+
+// Cleanup event listeners khi component unmount
+onBeforeUnmount(() => {
+    console.log('🧹 PaymentPage unmounting, cleanup event listeners')
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    if (window._paymentPageVisibilityHandler) {
+        document.removeEventListener('visibilitychange', window._paymentPageVisibilityHandler)
+        delete window._paymentPageVisibilityHandler
+    }
+})
+
+
 
 // Tạo đơn hàng cho MOMO (giống handleCreateOrder nhưng không redirect)
 const initiateMoMoPayment = async (orderId) => {

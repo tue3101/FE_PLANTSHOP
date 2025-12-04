@@ -29,14 +29,9 @@
                     </div>
 
                     <!-- Address -->
-                    <div>
-                        <label for="address" class="block text-gray-700 font-semibold mb-2">
-                            Địa chỉ <span class="text-red-500">*</span>
-                        </label>
-                        <textarea v-model="formData.address" id="address" required rows="3"
-                            placeholder="Nhập địa chỉ giao hàng"
-                            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
-                    </div>
+                    <AddressSelector v-model="addressData" mode="shipping" :required="true" :show-shipping-notice="true"
+                        focus-ring-class="focus:ring-green-500" address-placeholder="Ví dụ: 123 Đường ABC, Phường XYZ"
+                        @change="handleAddressChange" />
 
                     <!-- Note -->
                     <div>
@@ -77,6 +72,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores/user'
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
 import ConfirmLeaveModal from '@/components/common/ConfirmLeaveModal.vue'
+import AddressSelector from '@/components/common/AddressSelector.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -89,6 +85,15 @@ const formData = ref({
     phone_number: '',
     address: '',
     note: ''
+})
+
+// Address data cho AddressSelector (mode shipping)
+const addressData = ref({
+    fullAddress: '',
+    address: '',
+    district_id: null,
+    city_id: null,
+    district_name: null
 })
 
 const showConfirmModal = ref(false)
@@ -141,6 +146,15 @@ onMounted(async () => {
                     phone_number: userStore.userInfo.phone_number || '',
                     address: userStore.userInfo.address || ''
                 }
+
+                // Khởi tạo addressData từ userInfo nếu có
+                addressData.value = {
+                    fullAddress: userStore.userInfo.address || '',
+                    address: userStore.userInfo.address || '',
+                    district_id: userStore.userInfo.district_id || null,
+                    city_id: userStore.userInfo.city_id || null,
+                    district_name: null
+                }
             }
         }
     } catch (error) {
@@ -148,10 +162,39 @@ onMounted(async () => {
     }
 })
 
+// Xử lý khi địa chỉ thay đổi
+const handleAddressChange = (newAddressData) => {
+    addressData.value = { ...newAddressData }
+}
+
 const handleSubmit = async () => {
     // Validate required fields
-    if (!formData.value.username || !formData.value.phone_number || !formData.value.address) {
+    if (!formData.value.username || !formData.value.phone_number) {
         errorMessage.value = 'Vui lòng điền đầy đủ thông tin bắt buộc!'
+        return
+    }
+
+    // Validate thành phố - bắt buộc phải chọn
+    if (!addressData.value.city_id) {
+        errorMessage.value = 'Vui lòng chọn thành phố!'
+        return
+    }
+
+    // Validate quận/huyện - bắt buộc phải chọn
+    if (!addressData.value.district_id) {
+        errorMessage.value = 'Vui lòng chọn quận/huyện!'
+        return
+    }
+
+    // Validate địa chỉ chi tiết - bắt buộc phải nhập
+    if (!addressData.value.address || !addressData.value.address.trim()) {
+        errorMessage.value = 'Vui lòng nhập địa chỉ chi tiết!'
+        return
+    }
+
+    // Validate địa chỉ hoàn chỉnh (fullAddress)
+    if (!addressData.value.fullAddress || !addressData.value.fullAddress.trim()) {
+        errorMessage.value = 'Vui lòng nhập đầy đủ thông tin địa chỉ giao hàng!'
         return
     }
 
@@ -159,13 +202,17 @@ const handleSubmit = async () => {
         // Lưu thông tin giao hàng vào sessionStorage
         const shippingInfo = {
             shipping_name: formData.value.username,
-            shipping_address: formData.value.address,
+            shipping_address: addressData.value.fullAddress, // Sử dụng fullAddress từ AddressSelector
             shipping_phone: formData.value.phone_number
         }
 
         sessionStorage.setItem('shipping_name', shippingInfo.shipping_name)
         sessionStorage.setItem('shipping_address', shippingInfo.shipping_address)
         sessionStorage.setItem('shipping_phone', shippingInfo.shipping_phone)
+        // Lưu city_id để tính phí ship
+        if (addressData.value.city_id) {
+            sessionStorage.setItem('shipping_city_id', addressData.value.city_id)
+        }
 
         console.log('✅ CheckInfoPage - Shipping info saved to sessionStorage:', shippingInfo)
 
@@ -175,10 +222,14 @@ const handleSubmit = async () => {
 
         // Navigate to review order page with shipping info
         router.push({
-            name: 'review-order',
+            name: 'payment',
             query: {
                 ...route.query, // Preserve selectedItems from cart page
-                shippingInfo: JSON.stringify(formData.value),
+                shippingInfo: JSON.stringify({
+                    ...formData.value,
+                    address: addressData.value.fullAddress,
+                    city_id: addressData.value.city_id || null
+                }),
                 fromCheckout: 'true' // Đánh dấu là điều hướng từ checkout
             }
         })

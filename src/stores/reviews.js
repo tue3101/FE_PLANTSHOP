@@ -117,7 +117,13 @@ export const useReviewStore = defineStore("review", () => {
     const updateReviewStore = async (reviewId, reviewData) => {
         const token = authStore.accessToken
         try {
+            console.log('📤 Store: Gọi API UPDATE review:', {
+                reviewId,
+                endpoint: `/api/reviews/${reviewId}`,
+                reviewData
+            })
             const response = await updateReview(reviewId, token, reviewData)
+            console.log('📥 Store: Response từ API UPDATE:', response.data)
             if (response.data.success) {
                 // Reload reviews if needed
                 if (currentReview.value?.product_id) {
@@ -126,7 +132,7 @@ export const useReviewStore = defineStore("review", () => {
             }
             return response
         } catch (error) {
-            console.error("Update review error:", error.message)
+            console.error("❌ Store: Update review error:", error.message)
             throw error
         }
     }

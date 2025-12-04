@@ -90,6 +90,11 @@
                            <Instagram :size="24" />
                         </a>
                      </div>
+                     <div>
+                        <p class="text-gray-600 mt-6">
+                           Trong quá trình mua hàng nếu có bất kì vấn đề phát sinh nào, bạn vui lòng liên hệ với chúng tôi qua các kênh trên hoặc để được hỗ trợ nhanh nhất hãy liên hệ qua số điện thoại hotline 0937 3979 86.
+                        </p>
+                     </div>
                   </div>
                </div>
             </div>

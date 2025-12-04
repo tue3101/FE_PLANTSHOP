@@ -79,70 +79,49 @@ const orders = ref([])
 const activeTab = ref('DELIVERED')
 
 const loadOrders = async () => {
-    console.log('🚀 loadOrders called')
     const userId = authStore.userId
-    console.log('👤 User ID:', userId)
 
     if (!userId) {
-        console.log('❌ No userId, redirecting to login')
         router.push('/login')
         return
     }
 
-    console.log('⏳ Starting executeAsync...')
 
     await executeAsync(async () => {
-        console.log('✅ Inside executeAsync callback')
 
         // Load orders từ store (reload để đảm bảo có dữ liệu mới nhất)
-        console.log('📦 Loading orders from store...')
         await orderStore.getOrdersByUserIdStore(userId)
-        console.log('✅ Orders loaded from store')
 
         // Lấy danh sách orders từ store
         // Tab "Đơn đã giao": status = CONFIRMED và shipping_status = DELIVERED
         // Tab "Đơn đã hủy": status = CANCELLED
         const allOrders = orderStore.orders || []
-        console.log('📋 All orders from store:', allOrders.length)
-        console.log('📋 All orders statuses:', allOrders.map(o => ({
-            id: o.order_id,
-            status: o.status,
-            shipping_status: o.shipping_status
-        })))
+
 
         // Sử dụng toUpperCase() để đảm bảo case-insensitive
         const rawOrders = allOrders.filter(order => {
             const status = (order.status || '').toUpperCase()
             const shippingStatus = (order.shipping_status || '').toUpperCase()
 
-            // Lấy các đơn đã giao (CONFIRMED + DELIVERED) hoặc đã hủy (CANCELLED)
-            return (status === 'CONFIRMED' && shippingStatus === 'DELIVERED') || status === 'CANCELLED'
+            // Lấy các đơn đã giao (CONFIRMED + DELIVERED) hoặc đã hủy (CANCELLED status hoặc CANCELLED shipping_status)
+            return (status === 'CONFIRMED' && shippingStatus === 'DELIVERED') ||
+                status === 'CANCELLED' ||
+                shippingStatus === 'CANCELLED'
         })
 
-        console.log('📋 Filtered orders (CONFIRMED+DELIVERED and CANCELLED only):', rawOrders.length)
-        console.log('📋 Filtered orders details:', rawOrders.map(o => ({
-            id: o.order_id,
-            status: o.status,
-            shipping_status: o.shipping_status
-        })))
-        console.log('📊 Number of orders:', rawOrders.length)
 
         if (rawOrders.length === 0) {
-            console.log('⚠️ No orders found, setting empty array')
             orders.value = []
             return
         }
 
         // Load order details cho từng order (load tuần tự để tránh lỗi 400)
-        console.log('🔄 Starting to load order details for each order...')
         const ordersWithDetails = []
 
         for (const order of rawOrders) {
-            console.log(`📝 Processing order ${order.order_id}...`)
 
             // Kiểm tra xem order đã có order_details chưa (từ API getOrdersByUserId)
             if (order.order_details && Array.isArray(order.order_details) && order.order_details.length > 0) {
-                console.log(`✅ Order ${order.order_id} already has order_details from initial API call`)
                 ordersWithDetails.push({
                     ...order,
                     order_details: order.order_details
@@ -152,24 +131,16 @@ const loadOrders = async () => {
 
             try {
                 // Load order details cho từng order (tuần tự thay vì song song)
-                console.log(`🌐 Calling API for order ${order.order_id}...`)
                 const detailsResponse = await orderStore.getOrderDetailsByOrderIdStore(order.order_id)
-                console.log(`✅ Order ${order.order_id} details response:`, detailsResponse?.data)
 
                 const orderDetails = detailsResponse?.data?.data || orderStore.currentOrderDetails || []
-                console.log(`📦 Order ${order.order_id} details:`, orderDetails)
-                console.log(`📊 Order ${order.order_id} has ${orderDetails.length} details`)
 
                 ordersWithDetails.push({
                     ...order,
                     order_details: orderDetails
                 })
             } catch (error) {
-                console.error(`❌ Error loading order details for order ${order.order_id}:`, error)
-                console.error(`❌ Error status:`, error.response?.status)
-                console.error(`❌ Error data:`, error.response?.data)
-                console.error(`❌ Error message:`, error.message)
-                // Vẫn thêm order vào danh sách nhưng với order_details rỗng
+                console.error(`Error loading order details for order ${order.order_id}:`, error)
                 ordersWithDetails.push({
                     ...order,
                     order_details: []
@@ -177,7 +148,6 @@ const loadOrders = async () => {
             }
         }
 
-        console.log('✅ All orders with details loaded:', ordersWithDetails)
 
         // Map orders với order details vào local ref (theo cấu trúc CategoryView)
         // Giữ nguyên tất cả fields của order, chỉ đảm bảo có order_details
@@ -186,26 +156,22 @@ const loadOrders = async () => {
             order_details: order.order_details || []
         }))
 
-        console.log('🎯 Final orders value:', orders.value)
-        console.log('📊 Final orders count:', orders.value.length)
+
 
         // Load user reviews riêng (có thể lỗi nhưng không ảnh hưởng đến orders)
         try {
-            console.log('⭐ Loading user reviews...')
             await reviewStore.getReviewsByUserIdStore(userId)
-            console.log('✅ User reviews loaded')
         } catch (error) {
-            console.error('❌ Error loading user reviews:', error)
+            console.error('Error loading user reviews:', error)
         }
     }, {
         defaultErrorMessage: 'Không thể tải lịch sử đơn hàng!',
         onError: (error) => {
-            console.error('❌ executeAsync onError:', error)
+            console.error('executeAsync onError:', error)
             errorMessage.value = error.response?.data?.message || error.message
         }
     })
 
-    console.log('🏁 loadOrders completed')
 }
 
 // Filter theo tab đang chọn
@@ -218,10 +184,11 @@ const filteredOrders = computed(() => {
             return status === 'CONFIRMED' && shippingStatus === 'DELIVERED'
         })
     } else if (activeTab.value === 'CANCELLED') {
-        // Tab "Đơn đã hủy": hiển thị các đơn có status = CANCELLED
+        // Tab "Đơn đã hủy": hiển thị các đơn có status = CANCELLED hoặc shipping_status = CANCELLED (giao thất bại)
         return orders.value.filter(order => {
             const status = (order.status || '').toUpperCase()
-            return status === 'CANCELLED'
+            const shippingStatus = (order.shipping_status || '').toUpperCase()
+            return status === 'CANCELLED' || shippingStatus === 'CANCELLED'
         })
     }
     return []

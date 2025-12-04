@@ -184,10 +184,21 @@ export const useOrderStore = defineStore("order", () => {
     const updateOrderShippingStatusStore = async (orderId, shippingStatus) => {
         const token = authStore.accessToken
         try {
+            console.log('🔄 Updating shipping status:', { orderId, shippingStatus })
             const response = await updateOrderShippingStatus(orderId, token, shippingStatus)
+            console.log('📦 Response from backend:', response.data)
             if (response.data.success) {
                 // Reload orders list
                 await getAllOrdersStore()
+                // Kiểm tra giá trị sau khi reload
+                const updatedOrder = orders.value.find(o => o.order_id === orderId)
+                if (updatedOrder) {
+                    console.log('✅ Order after reload:', {
+                        orderId: updatedOrder.order_id,
+                        shipping_status: updatedOrder.shipping_status,
+                        status: updatedOrder.status
+                    })
+                }
             }
             return response
         } catch (error) {

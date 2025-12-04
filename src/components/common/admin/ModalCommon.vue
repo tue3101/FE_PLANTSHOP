@@ -150,6 +150,14 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Address Selector -->
+                    <div v-else-if="field.type === 'address'">
+                        <AddressSelector :model-value="addressFieldData[field.key] || {}" mode="user"
+                            :required="field.required" focus-ring-class="focus:ring-blue-500"
+                            @update:model-value="handleAddressChange(field.key, $event)"
+                            @change="handleAddressChange(field.key, $event)" />
+                    </div>
                 </template>
 
                 <!-- Error Message -->
@@ -177,10 +185,11 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, reactive } from 'vue'
 import LoadingErrorState from '../LoadingErrorState.vue'
 import { useDragModal } from '@/composables/useDragModal'
 import { X, Upload } from 'lucide-vue-next'
+import AddressSelector from '@/components/common/AddressSelector.vue'
 
 const props = defineProps({
     showModal: {
@@ -225,6 +234,18 @@ const selectedFile = ref(null)
 const imagePreview = ref('')
 const fileError = ref('')
 
+// Address field data
+const addressFieldData = reactive({})
+
+// Handle address change
+const handleAddressChange = (fieldKey, addressData) => {
+    addressFieldData[fieldKey] = { ...addressData }
+    // Cập nhật vào formData
+    formData.value[fieldKey] = addressData.address || ''
+    formData.value[`${fieldKey}_district_id`] = addressData.district_id || null
+    formData.value[`${fieldKey}_city_id`] = addressData.city_id || null
+}
+
 // Drag functionality để di chuyển modal
 const modalRef = ref(null)
 const { position, handleMouseDown } = useDragModal(props)
@@ -233,8 +254,20 @@ const { position, handleMouseDown } = useDragModal(props)
 const initializeFormData = () => {
     const data = {}
     props.fields.forEach(field => {
+        // Xử lý address field đặc biệt
+        if (field.type === 'address') {
+            // Khởi tạo addressFieldData
+            addressFieldData[field.key] = {
+                address: props.initialData?.[field.key] || '',
+                district_id: props.initialData?.[`${field.key}_district_id`] || props.initialData?.district_id || null,
+                city_id: props.initialData?.[`${field.key}_city_id`] || props.initialData?.city_id || null
+            }
+            data[field.key] = props.initialData?.[field.key] || ''
+            data[`${field.key}_district_id`] = props.initialData?.[`${field.key}_district_id`] || props.initialData?.district_id || null
+            data[`${field.key}_city_id`] = props.initialData?.[`${field.key}_city_id`] || props.initialData?.city_id || null
+        }
         // Nếu có initialData (update mode), sử dụng giá trị từ đó
-        if (props.initialData && props.initialData[field.key] !== undefined) {
+        else if (props.initialData && props.initialData[field.key] !== undefined) {
             data[field.key] = props.initialData[field.key]
         } else if (field.type === 'number') {
             data[field.key] = field.defaultValue !== undefined ? field.defaultValue : 0
@@ -316,6 +349,21 @@ watch(() => props.showModal, (newVal) => {
     if (newVal) {
         // Khi mở modal, khởi tạo lại form data với initialData mới
         formData.value = initializeFormData()
+
+        // Reset và khởi tạo addressFieldData
+        Object.keys(addressFieldData).forEach(key => {
+            delete addressFieldData[key]
+        })
+        props.fields.forEach(field => {
+            if (field.type === 'address') {
+                addressFieldData[field.key] = {
+                    address: props.initialData?.[field.key] || '',
+                    district_id: props.initialData?.district_id || null,
+                    city_id: props.initialData?.city_id || null
+                }
+            }
+        })
+
         if (props.initialData) {
             // Nếu có image trong initialData, set preview
             const imageField = props.fields.find(f => f.type === 'image' || f.type === 'file')
@@ -328,6 +376,11 @@ watch(() => props.showModal, (newVal) => {
         formData.value = initializeFormData()
         removeImage()
         fileError.value = ''
+
+        // Reset addressFieldData
+        Object.keys(addressFieldData).forEach(key => {
+            delete addressFieldData[key]
+        })
     }
 })
 
@@ -367,6 +420,22 @@ const handleSubmit = () => {
     if (selectedFile.value) {
         submitData.imageFile = selectedFile.value
     }
+
+    // Xử lý address fields: gộp lại thành address, district_id, city_id
+    props.fields.forEach(field => {
+        if (field.type === 'address') {
+            const addressData = addressFieldData[field.key]
+            if (addressData) {
+                submitData[field.key] = addressData.address || ''
+                submitData['district_id'] = addressData.district_id || null
+                submitData['city_id'] = addressData.city_id || null
+                // Xóa các field phụ
+                delete submitData[`${field.key}_district_id`]
+                delete submitData[`${field.key}_city_id`]
+            }
+        }
+    })
+
     emit('submit', submitData)
 }
 

@@ -27,121 +27,97 @@
             </div>
 
             <!-- Products to Review -->
-            <div v-if="!isLoading && !errorMessage && productsToReview.length > 0">
-                <form @submit.prevent="handleSubmitAllReviews">
-                    <div class="space-y-6 mb-6">
-                        <div v-for="productItem in productsToReview"
-                            :key="`${productItem.product_id}-${productItem.order_id}`"
-                            class="bg-white rounded-lg shadow p-6">
-                            <div class="flex flex-col md:flex-row gap-4 mb-4">
-                                <!-- Product Image -->
-                                <img :src="getProductImage(productItem.product)"
-                                    :alt="getProductName(productItem.product)"
-                                    class="w-24 h-24 object-contain bg-gray-100 rounded-lg"
-                                    @error="handleImageError($event)" />
+            <div v-if="!isLoading && !errorMessage && productsToReview.length > 0" class="space-y-6">
+                <div v-for="productItem in productsToReview" :key="`${productItem.product_id}-${productItem.order_id}`"
+                    class="bg-white rounded-lg shadow p-6">
+                    <div class="flex flex-col md:flex-row gap-4 mb-4">
+                        <!-- Product Image -->
+                        <img :src="getProductImage(productItem.product)" :alt="getProductName(productItem.product)"
+                            class="w-24 h-24 object-contain bg-gray-100 rounded-lg" @error="handleImageError($event)" />
 
-                                <!-- Product Info -->
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-800 mb-2">
-                                        {{ getProductName(productItem.product) }}
-                                    </h3>
-                                    <p class="text-sm text-gray-600 mb-1">
-                                        Đơn hàng: #{{ productItem.order_id }}
-                                    </p>
-                                    <p class="text-sm text-gray-600">
-                                        Số lượng: {{ productItem.quantity }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Review Form -->
-                            <div v-if="!productItem.hasReview" class="border-t pt-4">
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Đánh giá của bạn:
-                                    </label>
-                                    <StarRating v-model="productItem.rating"
-                                        :disabled="isSubmittingAll || productItem.isSubmitting" />
-                                </div>
-
-                                <div class="mb-4">
-                                    <label :for="`comment-${productItem.product_id}`"
-                                        class="block text-sm font-medium text-gray-700 mb-2">
-                                        Nhận xét (tùy chọn):
-                                    </label>
-                                    <textarea :id="`comment-${productItem.product_id}`" v-model="productItem.comment"
-                                        rows="3" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
-                                        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        :disabled="isSubmittingAll || productItem.isSubmitting"></textarea>
-                                </div>
-
-                                <div v-if="productItem.reviewError" class="mb-2 text-red-600 text-sm">
-                                    {{ productItem.reviewError }}
-                                </div>
-
-                                <!-- Submit Single Review Button -->
-                                <div class="flex justify-end mt-4">
-                                    <button type="button" @click="handleSubmitSingleReview(productItem)"
-                                        :disabled="!canSubmitSingle(productItem) || productItem.isSubmitting"
-                                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer font-semibold">
-                                        {{ productItem.isSubmitting ? 'Đang gửi...' : 'Gửi đánh giá' }}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Already Reviewed -->
-                            <div v-else class="border-t pt-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-sm text-gray-600 mb-2">Bạn đã đánh giá sản phẩm này</p>
-                                        <StarRating :model-value="productItem.existingReview?.rating || 0"
-                                            :disabled="true" />
-                                        <p v-if="productItem.existingReview?.comment" class="mt-2 text-gray-700">
-                                            {{ productItem.existingReview.comment }}
-                                        </p>
-                                        <div v-if="productItem.reviewError" class="mt-2 text-red-600 text-sm">
-                                            {{ productItem.reviewError }}
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-2 ml-4">
-                                        <button type="button" @click="handleEditReview(productItem)"
-                                            class="px-4 py-2 text-blue-600 hover:text-blue-700 transition-colors cursor-pointer">
-                                            Sửa đánh giá
-                                        </button>
-                                        <button type="button" @click="handleDeleteReview(productItem)"
-                                            :disabled="productItem.isDeleting"
-                                            class="px-4 py-2 text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                                            {{ productItem.isDeleting ? 'Đang xóa...' : 'Xóa đánh giá' }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <!-- Product Info -->
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                                {{ getProductName(productItem.product) }}
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-1">
+                                Đơn hàng: #{{ productItem.order_id }}
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                Số lượng: {{ productItem.quantity }}
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Submit All Button -->
-                    <div v-if="hasProductsToReview" class="bg-white rounded-lg shadow p-6 sticky bottom-0">
-                        <div v-if="submitAllError" class="mb-4 text-red-600 text-sm">
-                            {{ submitAllError }}
+                    <!-- Review Form -->
+                    <div v-if="!productItem.hasReview" class="border-t pt-4">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Đánh giá của bạn:
+                            </label>
+                            <StarRating v-model="productItem.rating" :disabled="productItem.isSubmitting" />
                         </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-gray-600">
-                                Đánh giá <span class="font-semibold">{{ productsToReviewCount }}</span> sản phẩm
-                            </p>
-                            <button type="submit" :disabled="!canSubmitAll || isSubmittingAll"
-                                class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer font-semibold text-lg">
-                                {{ isSubmittingAll ? 'Đang gửi đánh giá...' : 'Gửi tất cả đánh giá' }}
+
+                        <div class="mb-4">
+                            <label :for="`comment-${productItem.product_id}`"
+                                class="block text-sm font-medium text-gray-700 mb-2">
+                                Nhận xét (tùy chọn):
+                            </label>
+                            <textarea :id="`comment-${productItem.product_id}`" v-model="productItem.comment" rows="3"
+                                placeholder="Chia sẻ cảm nhận của bạn về sản phẩm này..."
+                                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                :disabled="productItem.isSubmitting"></textarea>
+                        </div>
+
+                        <div v-if="productItem.reviewError" class="mb-2 text-red-600 text-sm">
+                            {{ productItem.reviewError }}
+                        </div>
+
+                        <!-- Submit Single Review Button -->
+                        <div class="flex justify-end mt-4">
+                            <button type="button"
+                                @click="productItem.isEditing ? handleUpdateReview(productItem) : handleCreateReview(productItem)"
+                                :disabled="!canSubmitSingle(productItem) || productItem.isSubmitting"
+                                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer font-semibold">
+                                {{ productItem.isSubmitting ? 'Đang gửi...' : (productItem.isEditing ? 'Cập nhật đánh giá' : 'Gửi đánh giá') }}
                             </button>
                         </div>
                     </div>
-                </form>
+
+                    <!-- Already Reviewed -->
+                    <div v-else class="border-t pt-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-600 mb-2">Bạn đã đánh giá sản phẩm này</p>
+                                <StarRating :model-value="productItem.existingReview?.rating || 0" :disabled="true" />
+                                <p v-if="productItem.existingReview?.comment" class="mt-2 text-gray-700">
+                                    {{ productItem.existingReview.comment }}
+                                </p>
+                                <div v-if="productItem.reviewError" class="mt-2 text-red-600 text-sm">
+                                    {{ productItem.reviewError }}
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-4">
+                                <button type="button" @click="handleEditReview(productItem)"
+                                    class="px-4 py-2 text-blue-600 hover:text-blue-700 transition-colors cursor-pointer">
+                                    Sửa đánh giá
+                                </button>
+                                <button type="button" @click="handleDeleteReview(productItem)"
+                                    :disabled="productItem.isDeleting"
+                                    class="px-4 py-2 text-red-600 hover:text-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {{ productItem.isDeleting ? 'Đang xóa...' : 'Xóa đánh giá' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrderStore } from '@/stores/orders'
@@ -161,8 +137,6 @@ const { isLoading, errorMessage, executeAsync, resetError } = useAsyncOperation(
 
 const currentOrder = ref(null)
 const productsToReview = ref([])
-const isSubmittingAll = ref(false)
-const submitAllError = ref('')
 
 // Load products from specific order
 const loadProductsToReview = async () => {
@@ -241,6 +215,8 @@ const loadProductsToReview = async () => {
                     comment: existingReview ? (existingReview.comment || '') : '',
                     hasReview: !!existingReview,
                     existingReview: existingReview || null,
+                    isEditing: false,
+                    editingReviewId: null,
                     isSubmitting: false,
                     isDeleting: false,
                     reviewError: ''
@@ -255,83 +231,13 @@ const loadProductsToReview = async () => {
     })
 }
 
-// Computed properties
-const hasProductsToReview = computed(() => {
-    return productsToReview.value.some(item => !item.hasReview)
-})
-
-const productsToReviewCount = computed(() => {
-    return productsToReview.value.filter(item => !item.hasReview).length
-})
-
-const canSubmitAll = computed(() => {
-    const unreviewedProducts = productsToReview.value.filter(item => !item.hasReview)
-    return unreviewedProducts.length > 0 && unreviewedProducts.every(item => item.rating > 0)
-})
-
-// Handle submit all reviews
-const handleSubmitAllReviews = async () => {
-    const unreviewedProducts = productsToReview.value.filter(item => !item.hasReview)
-
-    if (unreviewedProducts.length === 0) {
-        submitAllError.value = 'Tất cả sản phẩm đã được đánh giá!'
-        return
-    }
-
-    // Validate all products have rating
-    const productsWithoutRating = unreviewedProducts.filter(item => item.rating === 0)
-    if (productsWithoutRating.length > 0) {
-        submitAllError.value = `Vui lòng đánh giá tất cả ${productsWithoutRating.length} sản phẩm!`
-        return
-    }
-
-    // Validate all products have order_detail_id
-    const productsWithoutOrderDetail = unreviewedProducts.filter(item => !item.order_detail_id)
-    if (productsWithoutOrderDetail.length > 0) {
-        submitAllError.value = 'Một số sản phẩm không có thông tin chi tiết đơn hàng!'
-        return
-    }
-
-    isSubmittingAll.value = true
-    submitAllError.value = ''
-
-    try {
-        // Submit all reviews in parallel
-        const reviewPromises = unreviewedProducts.map(async (productItem) => {
-            const reviewData = {
-                product_id: productItem.product_id,
-                order_detail_id: productItem.order_detail_id,
-                rating: productItem.rating,
-                comment: productItem.comment || ''
-            }
-            return await reviewStore.createReviewStore(reviewData)
-        })
-
-        await Promise.all(reviewPromises)
-
-        // Reload user reviews and products to update hasReview status
-        const userId = authStore.userId
-        if (userId) {
-            await reviewStore.getReviewsByUserIdStore(userId)
-        }
-        await loadProductsToReview()
-
-        // Show success message (optional)
-        submitAllError.value = ''
-    } catch (error) {
-        submitAllError.value = error.response?.data?.message || error.message || 'Không thể gửi đánh giá!'
-    } finally {
-        isSubmittingAll.value = false
-    }
-}
-
 // Check if single review can be submitted
 const canSubmitSingle = (productItem) => {
     return productItem.rating > 0
 }
 
-// Handle submit single review
-const handleSubmitSingleReview = async (productItem) => {
+// Hàm tạo đánh giá mới
+const handleCreateReview = async (productItem) => {
     if (productItem.rating === 0) {
         productItem.reviewError = 'Vui lòng chọn số sao đánh giá!'
         return
@@ -354,13 +260,13 @@ const handleSubmitSingleReview = async (productItem) => {
             comment: productItem.comment || ''
         }
 
-        if (productItem.hasReview && productItem.existingReview) {
-            // Update existing review
-            await reviewStore.updateReviewStore(productItem.existingReview.review_id, reviewData)
-        } else {
-            // Create new review (requires order_detail_id)
-            await reviewStore.createReviewStore(reviewData)
-        }
+
+        await reviewStore.createReviewStore(reviewData)
+        console.log('✅ Đã tạo đánh giá mới thành công')
+
+        // Reset editing state
+        productItem.isEditing = false
+        productItem.editingReviewId = null
 
         // Reload user reviews and products to update hasReview status
         const userId = authStore.userId
@@ -369,7 +275,68 @@ const handleSubmitSingleReview = async (productItem) => {
         }
         await loadProductsToReview()
     } catch (error) {
-        productItem.reviewError = error.response?.data?.message || error.message || 'Không thể gửi đánh giá!'
+        console.error('❌ Lỗi khi tạo đánh giá:', error)
+        productItem.reviewError = error.response?.data?.message || error.message || 'Không thể tạo đánh giá!'
+    } finally {
+        productItem.isSubmitting = false
+    }
+}
+
+// Hàm cập nhật đánh giá
+const handleUpdateReview = async (productItem) => {
+    if (productItem.rating === 0) {
+        productItem.reviewError = 'Vui lòng chọn số sao đánh giá!'
+        return
+    }
+
+    // Validate order_detail_id
+    if (!productItem.order_detail_id) {
+        productItem.reviewError = 'Không tìm thấy thông tin chi tiết đơn hàng!'
+        return
+    }
+
+    // Lấy review_id từ editingReviewId hoặc existingReview
+    const reviewId = productItem.editingReviewId ||
+        productItem.existingReview?.review_id ||
+        productItem.existingReview?.id ||
+        null
+
+    if (!reviewId) {
+        productItem.reviewError = 'Không tìm thấy mã đánh giá để cập nhật!'
+        return
+    }
+
+    productItem.isSubmitting = true
+    productItem.reviewError = ''
+
+    try {
+        const reviewData = {
+            product_id: productItem.product_id,
+            order_detail_id: productItem.order_detail_id,
+            rating: productItem.rating,
+            comment: productItem.comment || ''
+        }
+
+        console.log('🔄 Cập nhật đánh giá với review_id:', reviewId)
+        console.log('📤 Gọi API UPDATE:', `/api/reviews/${reviewId}`)
+        console.log('📦 Review data:', reviewData)
+
+        await reviewStore.updateReviewStore(reviewId, reviewData)
+        console.log('✅ Đã cập nhật đánh giá thành công')
+
+        // Reset editing state
+        productItem.isEditing = false
+        productItem.editingReviewId = null
+
+        // Reload user reviews and products to update hasReview status
+        const userId = authStore.userId
+        if (userId) {
+            await reviewStore.getReviewsByUserIdStore(userId)
+        }
+        await loadProductsToReview()
+    } catch (error) {
+        console.error('❌ Lỗi khi cập nhật đánh giá:', error)
+        productItem.reviewError = error.response?.data?.message || error.message || 'Không thể cập nhật đánh giá!'
     } finally {
         productItem.isSubmitting = false
     }
@@ -378,9 +345,36 @@ const handleSubmitSingleReview = async (productItem) => {
 // Handle edit review
 const handleEditReview = (productItem) => {
     if (productItem.existingReview) {
+        const reviewId = productItem.existingReview.review_id || productItem.existingReview.id
+        console.log('✏️ Bắt đầu sửa đánh giá:', {
+            review_id: reviewId,
+            existingReview: productItem.existingReview
+        })
+
+        // Lưu review_id vào productItem để đảm bảo không bị mất
+        productItem.editingReviewId = reviewId
+
+        // Set flag isEditing để phân biệt create và update
+        productItem.isEditing = true
+
+        // Giữ nguyên existingReview để đảm bảo có review_id khi submit
+        // Chỉ cập nhật rating và comment để hiển thị trong form
         productItem.rating = productItem.existingReview.rating
         productItem.comment = productItem.existingReview.comment || ''
+
+        // Set hasReview = false để hiển thị form edit
         productItem.hasReview = false
+
+        console.log('✅ Đã chuẩn bị sửa đánh giá:', {
+            review_id: reviewId,
+            editingReviewId: productItem.editingReviewId,
+            isEditing: productItem.isEditing,
+            existingReview: productItem.existingReview,
+            rating: productItem.rating,
+            comment: productItem.comment
+        })
+    } else {
+        console.warn('⚠️ Không tìm thấy existingReview để sửa')
     }
 }
 

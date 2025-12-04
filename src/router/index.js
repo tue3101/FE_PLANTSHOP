@@ -26,8 +26,6 @@ import OrderPage from "@/views/user/content/order/OrderPage.vue"
 import OrderHistoryPage from "@/views/user/content/order/OrderHistoryPage.vue"
 import PaymentReturnPage from "@/views/user/content/payment/PaymentReturnPage.vue"
 import ReviewPage from "@/views/user/content/ReviewPage.vue"
-import TransactionView from "@/views/admin/content/TransactionView.vue"
-import { DollarSign } from "lucide-vue-next"
 import ProductDetailPage from "@/components/common/user/product/ProductDetailPage.vue"
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -145,8 +143,8 @@ const router = createRouter({
           },
         },
         {
-          path: "review-order",
-          name: "review-order",
+          path: "payment",
+          name: "payment",
           component: PaymentPage,
           meta: {
             isShow: false,
@@ -300,18 +298,6 @@ const router = createRouter({
             icon: ShoppingCart,
             isShow: true,
             title: "Quản Lý Đơn Hàng",
-            requiresAuth: true,
-            requiresAdmin: true,
-          },
-        },
-        {
-          path: "payments",
-          name: "payments",
-          component: TransactionView,
-          meta: {
-            icon: DollarSign,
-            isShow: true,
-            title: "Quản Lý Giao Dịch",
             requiresAuth: true,
             requiresAdmin: true,
           },

@@ -1,9 +1,9 @@
 <template>
-    <div class="relative w-full ">
+    <div ref="searchContainer" class="relative w-full ">
         <div class="relative">
             <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input type="text" :value="modelValue" :placeholder="placeholder" :class="computedInputClass"
-                @input="handleInput" @keyup.enter="handleEnter" />
+                @input="handleInput" @keyup.enter="handleEnter" @focus="handleFocus" />
         </div>
 
         <!-- Category Dropdown -->
@@ -20,7 +20,7 @@
         </div> -->
 
         <!-- Search Suggestions  -->
-        <div v-if="showSuggestions && mode === 'user' && suggestions.length > 0 && modelValue.trim()"
+        <div v-if="showSuggestions && mode === 'user' && suggestions.length > 0 && modelValue.trim() && isSuggestionsVisible"
             class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
             <div v-for="suggestion in suggestions" :key="suggestion.product_id"
                 @click.stop="selectSuggestion(suggestion)"
@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from 'lucide-vue-next'
 import { useProductStore } from '@/stores/products'
@@ -85,6 +85,8 @@ const productStore = useProductStore()
 
 const selectedCategory = ref(props.initialCategory || '')
 const suggestions = ref([])
+const isSuggestionsVisible = ref(true)
+const searchContainer = ref(null)
 
 // Computed input class
 const computedInputClass = computed(() => {
@@ -121,9 +123,18 @@ const handleInput = (event) => {
     emit('update:modelValue', value)
 
     if (props.mode === 'user' && props.showSuggestions && value.trim()) {
+        isSuggestionsVisible.value = true
         updateSuggestions()
     } else {
         suggestions.value = []
+        isSuggestionsVisible.value = false
+    }
+}
+
+// Handle focus
+const handleFocus = () => {
+    if (props.mode === 'user' && props.showSuggestions && props.modelValue.trim() && suggestions.value.length > 0) {
+        isSuggestionsVisible.value = true
     }
 }
 
@@ -176,8 +187,9 @@ const handleSearch = () => {
         query: queryParams
     })
 
-    // Clear suggestions
+    // Clear suggestions và ẩn dropdown
     suggestions.value = []
+    isSuggestionsVisible.value = false
 }
 
 // Handle category change
@@ -199,7 +211,15 @@ const selectSuggestion = (product) => {
     console.log('Navigating to product detail:', productId, product)
     router.push(`/product-detail/${productId}`)
     suggestions.value = []
+    isSuggestionsVisible.value = false
     emit('update:modelValue', getProductName(product))
+}
+
+// Handle click outside
+const handleClickOutside = (event) => {
+    if (searchContainer.value && !searchContainer.value.contains(event.target)) {
+        isSuggestionsVisible.value = false
+    }
 }
 
 // Helper functions
@@ -256,5 +276,13 @@ onMounted(async () => {
             }
         }
     }
+    
+    // Thêm event listener để detect click outside
+    document.addEventListener('click', handleClickOutside)
+})
+
+// Cleanup event listener khi component unmount
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
 })
 </script>

@@ -203,6 +203,7 @@ const filteredItems = computed(() => {
                 p.shipping_status === 'SHIPPING'
             )
         } else {
+            // Lọc theo trạng thái giao hàng chính xác: DELIVERED, CANCELLED (Giao thất bại), etc.
             result = result.filter((p) => p.shipping_status === props.selectedShippingStatus)
         }
     }

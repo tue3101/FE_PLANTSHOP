@@ -20,7 +20,7 @@
 
         <!-- Data Display -->
         <div v-if="!isLoading && !errorMessage">
-            <h2 class="text-2xl font-bold mb-2">DANH SÁCH DANH MỤC</h2>
+            <h2 class="text-2xl font-bold mb-2">DANH SÁCH KHUYẾN MÃI</h2>
             <DataPager v-model="currentPageActive" :items="filteredDiscounts" :page-size="PAGE_SIZE" :show-active="true" :show-filter="true"
                 controls-class="mb2" @update:selectedActive="selectedActive = $event">
                 <template #default="{ items }">
@@ -59,10 +59,19 @@
             :fields="discountFields" :options="{ types: typeOptions }" @close="closeViewModal"
             @update:showModal="showViewModal = $event" />
 
-        <!-- Modals -->
+        <!-- Delete Modals -->
         <DeleteModal :showModal="showDeleteConfirmModal" mode="confirm" @confirm="handleDeleteConfirm"
             @cancel="handleDeleteCancel" />
-        <DeleteModal :showModal="showDeleteSuccessModal" mode="success" @close="handleDeleteSuccessClose" />
+        <DeleteModal :showModal="showDeleteSuccessModal" mode="delete-success" @close="handleDeleteSuccessClose" />
+
+        <!-- Add Success Modal -->
+        <DeleteModal :showModal="showAddSuccessModal" mode="add-success" @close="handleAddSuccessClose" />
+
+        <!-- Update Success Modal -->
+        <DeleteModal :showModal="showUpdateSuccessModal" mode="update-success" @close="handleUpdateSuccessClose" />
+
+        <!-- Restore Success Modal -->
+        <DeleteModal :showModal="showRestoreSuccessModal" mode="restore-success" @close="handleRestoreSuccessClose" />
     </div>
 </template>
 
@@ -124,6 +133,7 @@ const { isLoading, errorMessage, executeAsync, resetError } = useAsyncOperation(
 
 // ===========================Add Modal==========================
 const showAddModal = ref(false)
+const showAddSuccessModal = ref(false)
 const addError = ref('')
 const { executeAsync: executeAddAsync, isLoading: isAdding } = useAsyncOperation()
 
@@ -135,6 +145,10 @@ const openAddModal = () => {
 const closeAddModal = () => {
     showAddModal.value = false
     addError.value = ''
+}
+
+const handleAddSuccessClose = () => {
+    showAddSuccessModal.value = false
 }
 
 const handleAddDiscount = async (discountData) => {
@@ -162,6 +176,7 @@ const handleAddDiscount = async (discountData) => {
         await refreshDiscountsData(token)
         closeAddModal()
         addError.value = '' // Reset error khi thành công
+        showAddSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể thêm mã giảm giá!',
         onError: (error) => {
@@ -171,6 +186,7 @@ const handleAddDiscount = async (discountData) => {
 }
 // ===========================Update Modal==========================
 const showUpdateModal = ref(false)
+const showUpdateSuccessModal = ref(false)
 const updateError = ref('')
 const selectedDiscountForUpdate = ref(null)
 const { executeAsync: executeUpdateAsync, isLoading: isUpdating } = useAsyncOperation()
@@ -185,6 +201,10 @@ const closeUpdateModal = () => {
     showUpdateModal.value = false
     selectedDiscountForUpdate.value = null
     updateError.value = ''
+}
+
+const handleUpdateSuccessClose = () => {
+    showUpdateSuccessModal.value = false
 }
 const handleUpdateDiscount = async (discountData) => {
     updateError.value = ''
@@ -213,6 +233,7 @@ const handleUpdateDiscount = async (discountData) => {
         await refreshDiscountsData(token)
         closeUpdateModal()
         updateError.value = ''
+        showUpdateSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể cập nhật mã giảm giá!',
         onError: (error) => {
@@ -271,6 +292,11 @@ async function handleDeleteConfirm() {
     })
 }
 //====================================restore======================================
+const showRestoreSuccessModal = ref(false)
+
+const handleRestoreSuccessClose = () => {
+    showRestoreSuccessModal.value = false
+}
 
 async function handleRestore(item) {
     const discountId = item.discount_id
@@ -289,6 +315,7 @@ async function handleRestore(item) {
     await executeAsync(async () => {
         await discountStore.restoreDiscountStore(discountId, token)
         await refreshDiscountsData(token)
+        showRestoreSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể khôi phục mã giảm giá!',
         onError: (error) => {

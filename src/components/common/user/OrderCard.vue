@@ -63,56 +63,131 @@
         </div>
 
         <!-- Order Items -->
-        <div class="mb-4 pt-3 border-t ">
+        <div class="mb-4 pt-3 border-t  border-gray-300">
             <h4 class="font-semibold text-gray-800 mb-2">Sản phẩm:</h4>
             <div class="space-y-2">
                 <div v-for="detail in order.order_details" :key="detail.order_detail_id"
                     class="flex items-center gap-3 p-2 bg-gray-50 rounded">
                     <img :src="getProductImage(detail.product)" :alt="getProductName(detail.product)"
                         class="w-16 h-16 object-contain bg-white rounded" @error="handleImageError($event)" />
-                    <div class="flex-1">
+                    <div>
                         <p class="font-medium text-gray-800">{{ getProductName(detail.product) }}</p>
-                        <p class="text-sm text-gray-600">Số lượng: {{ detail.quantity }}</p>
-                        <p class="text-sm text-green-600 font-semibold">
-                            {{ formatPrice(detail.price_at_order) }} x {{ detail.quantity }}
+
+                    </div>
+                    <div class="flex flex-1 justify-center font-bold text-gray-800 font-semibold gap-100">
+                        <p class="">
+                            {{ formatPrice(detail.price_at_order) }}
                         </p>
+                        <p class=""> x {{ detail.quantity }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="font-bold text-gray-800">{{ formatPrice(detail.sub_total) }}</p>
+                        <p class="font-bold text-green-600 ">{{ formatPrice(detail.sub_total) }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Order Summary - Tạm tính chi tiết giống ReviewOrderPage -->
-        <div class="border-t pt-4 space-y-3">
-            <div class="flex justify-between text-gray-600">
-                <span>Tạm tính:</span>
-                <span class="font-semibold">{{ formatPrice(order.total) }}</span>
+        <div class="border-t border-gray-300 pt-4 space-y-3 ">
+            <div class=" text-gray-600 flex justify-end gap-4">
+                <span>Tạm tính ({{ totalQuantity }} sản phẩm):</span>
+                <span class="font-semibold ">{{ formatPrice(order.total) }}</span>
             </div>
-            <div class="flex justify-between" :class="isFreeship ? 'text-green-600' : 'text-gray-600'">
-                <span>Phí vận chuyển ({{ totalQuantity }} sản phẩm):</span>
+            <div class="flex justify-end gap-4 text-gray-600">
+                <span>Phí vận chuyển: </span>
                 <span class="font-semibold">
-                    <span v-if="isFreeship">Miễn phí</span>
-                    <span v-else>{{ formatPrice(shippingFee) }}</span>
+                    <span>{{ formatPrice(shippingFee) }}</span>
                 </span>
             </div>
-            <div v-if="specialDiscountAmount > 0" class="flex justify-between text-green-600">
+            <div v-if="specialDiscountAmount > 0" class="flex justify-end gap-4 text-green-600">
                 <span>
                     Giảm giá
                     <span v-if="order.discount_code">({{ order.discount_code }})</span>:
                 </span>
                 <span class="font-semibold">-{{ formatPrice(specialDiscountAmount) }}</span>
             </div>
-            <div class="border-t pt-3 flex justify-between text-lg font-bold text-gray-800">
+            <div v-if="order.deposit?.paid">
+                <div class="flex justify-end gap-4 items-center">
+                    <span class="text-gray-700">Số tiền đã đặt cọc:</span>
+                    <span class="font-semibold text-green-600">{{ formatPrice(order.deposit.amount) }}</span>
+                </div>
+            </div>
+            <div class="border-t pt-3 flex justify-end gap-4 text-lg font-bold text-gray-800">
                 <span>Tổng cộng:</span>
                 <span class="text-green-600">{{ formatPrice(order.final_total) }}</span>
+            </div>
+            <div v-if="order.deposit?.paid">
+                <div class="flex justify-end gap-4 items-center">
+                    <span class="font-semibold text-gray-800">Còn lại:</span>
+                    <span class="text-lg font-bold text-orange-600">{{ formatPrice(remainingAmount) }}</span>
+                </div>
             </div>
 
         </div>
 
+        <!-- Deposit Information -->
+        <!-- <div v-if="order.deposit_required" class="mt-4 pt-4 border-t space-y-3">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-semibold text-gray-700">Trạng thái đặt cọc:</span>
+                <span :class="[
+                    'inline-block px-3 py-1 rounded-full text-sm font-semibold',
+                    order.deposit?.paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                ]">
+                    {{ order.deposit?.paid ? 'Đã đặt cọc' : 'Chưa đặt cọc' }}
+                </span>
+            </div> -->
+
+        <!-- Nút đặt cọc (chỉ hiển thị khi chưa đặt cọc) -->
+        <!-- <div v-if="!order.deposit?.paid && order.deposit_payment">
+                <button @click="handleDepositPayment"
+                    class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold transition-colors cursor-pointer">
+                    Thanh toán cọc
+                </button>
+            </div> -->
+
+        <!-- Thông tin chi tiết đặt cọc (hiển thị khi đã đặt cọc) -->
+        <!-- <div v-if="order.deposit?.paid" class="bg-green-50 border-l-4 border-green-400 p-4 rounded space-y-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="text-sm font-semibold text-green-800">Đã đặt cọc thành công</p>
+                </div>
+
+                <div class="space-y-2 text-sm">
+
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700">Tổng giá trị đơn hàng:</span>
+                        <span class="font-semibold text-gray-800">{{ formatPrice(order.final_total) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-green-200">
+                        <span class="font-semibold text-gray-800">Số tiền còn lại phải thanh toán:</span>
+                        <span class="text-lg font-bold text-orange-600">{{ formatPrice(remainingAmount) }}</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-green-700 mt-2">
+                    Đơn hàng sẽ được xử lý trong thời gian sớm nhất. Số tiền còn lại sẽ được thanh toán khi nhận hàng.
+                </p>
+            </div> -->
+
+        <!-- Thông tin đặt cọc khi chưa đặt (hiển thị số tiền cần đặt cọc) -->
+        <!-- <div v-else-if="order.deposit" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700">Số tiền cần đặt cọc:</span>
+                        <span class="font-semibold text-yellow-600">{{ formatPrice(order.deposit.amount) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-700">Tổng giá trị đơn hàng:</span>
+                        <span class="font-semibold text-gray-800">{{ formatPrice(order.final_total) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+
         <!-- Action Buttons -->
-        <div class="mt-4 pt-4 border-t flex justify-end gap-3">
+        <div class="mt-4 pt-4  flex justify-end gap-3">
             <!-- Cancel Order Button -->
             <button v-if="showCancelButton" @click="$emit('cancel-order', order)"
                 :disabled="order.status !== 'PENDING_CONFIRMATION'" :class="[
@@ -144,7 +219,6 @@ import { defineProps, computed, onMounted, watch, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useReviewStore } from '@/stores/reviews'
 import { usePaymentStore } from '@/stores/payments'
-import { useOrderStore } from '@/stores/orders'
 
 const props = defineProps({
     order: {
@@ -167,7 +241,6 @@ defineEmits(['cancel-order'])
 const authStore = useAuthStore()
 const reviewStore = useReviewStore()
 const paymentStore = usePaymentStore()
-const orderStore = useOrderStore()
 const userReviews = ref([])
 const isLoadingReviews = ref(false)
 const paymentInfo = ref(null)
@@ -189,10 +262,12 @@ const shouldDisplayOrder = computed(() => {
 
     // Chỉ KHÔNG hiển thị khi ĐỒNG THỜI status = CONFIRMED VÀ shipping_status = DELIVERED
     // Hoặc khi status = CANCELLED
+    // Hoặc khi shipping_status = CANCELLED (Giao thất bại)
     // Nếu chỉ một trong hai điều kiện đúng (CONFIRMED hoặc DELIVERED) thì vẫn hiển thị
     const isConfirmedAndDelivered = status === 'CONFIRMED' && shippingStatus === 'DELIVERED'
     const isCancelled = status === 'CANCELLED'
-    return !isConfirmedAndDelivered && !isCancelled
+    const isShippingCancelled = shippingStatus === 'CANCELLED'
+    return !isConfirmedAndDelivered && !isCancelled && !isShippingCancelled
 })
 
 // Load user reviews to check if all products are reviewed
@@ -328,12 +403,12 @@ const totalQuantity = computed(() => {
 })
 
 // Tính tổng giá trị đơn hàng (tạm tính)
-const subTotal = computed(() => {
-    if (!props.order.order_details) return props.order.total || 0
-    return props.order.order_details.reduce((sum, detail) => {
-        return sum + (detail.sub_total || (detail.price_at_order || 0) * (detail.quantity || 0))
-    }, 0)
-})
+// const subTotal = computed(() => {
+//     if (!props.order.order_details) return props.order.total || 0
+//     return props.order.order_details.reduce((sum, detail) => {
+//         return sum + (detail.sub_total || (detail.price_at_order || 0) * (detail.quantity || 0))
+//     }, 0)
+// })
 
 
 
@@ -379,14 +454,17 @@ const shippingFee = computed(() => {
     return calculatedFee
 })
 
-// Kiểm tra có freeship không
-const isFreeship = computed(() => {
-    // Kiểm tra điều kiện freeship: >= 15 sản phẩm và tổng >= 4,000,000
-    if (totalQuantity.value >= 15 && subTotal.value >= 4000000) {
-        return true
+
+
+// Tính số tiền còn lại phải thanh toán sau khi đặt cọc
+const remainingAmount = computed(() => {
+    if (!props.order.deposit_required || !props.order.deposit?.paid || !props.order.deposit?.amount) {
+        return props.order.final_total || 0
     }
-    // Hoặc shipping_fee = 0
-    return shippingFee.value === 0 || shippingFee.value === null
+    const depositAmount = props.order.deposit.amount || 0
+    const finalTotal = props.order.final_total || 0
+    const remaining = finalTotal - depositAmount
+    return remaining > 0 ? remaining : 0
 })
 
 const formatPrice = (price) => {
@@ -514,7 +592,7 @@ const getShippingStatusText = (shippingStatus) => {
         'SHIPPING': 'Đang giao hàng',
         'DELIVERED': 'Đã giao hàng',
         'UNDELIVERED': 'Chưa được giao',
-        'CANCELLED': 'Đã hủy'
+        'CANCELLED': 'Giao thất bại'
     }
     return statusMap[shippingStatus] || shippingStatus
 }
@@ -590,4 +668,25 @@ const getShippingAddress = () => {
     const address = order.shipping_address
     return address
 }
+
+// Handle deposit payment
+// const handleDepositPayment = () => {
+//     const order = fullOrderInfo.value || props.order
+//     if (!order.deposit_payment) return
+
+//     // Lưu orderId vào sessionStorage
+//     sessionStorage.setItem('deposit_order_id', order.order_id.toString())
+
+//     // Kiểm tra nếu là mobile, dùng deeplink, nếu không dùng payUrl
+//     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+//     const paymentUrl = isMobile && order.deposit_payment.deeplink
+//         ? order.deposit_payment.deeplink
+//         : order.deposit_payment.payUrl
+
+//     if (paymentUrl) {
+//         window.location.href = paymentUrl
+//     } else {
+//         alert('Không tìm thấy link thanh toán. Vui lòng thử lại!')
+//     }
+// }
 </script>

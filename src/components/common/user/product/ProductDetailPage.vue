@@ -111,8 +111,9 @@
                         </div>
 
                         <!-- Quantity Selector -->
-                        <QuantitySelector :model-value="quantity" @update:model-value="updateQuantity" :min="1"
-                            :max="product.quantity || 999" label="Số lượng:" :show-error="true" />
+                        <QuantitySelector :model-value="quantity" @update:model-value="updateQuantity"
+                            @exceed-max="handleExceedMax" :min="1" :max="product.quantity || 999" label="Số lượng:"
+                            :show-error="true" />
 
                         <!-- Action Buttons -->
                         <div class="flex flex-col sm:flex-row gap-4 mt-auto">
@@ -232,6 +233,11 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal thông báo số lượng không đủ -->
+        <DeleteModal :show-modal="showStockModal" mode="info" title="Số lượng không đủ"
+            :message="`Số lượng sản phẩm trong kho không đủ. Số lượng tối đa có thể mua là ${product ? (product.quantity || 0) : 0} sản phẩm.`"
+            @close="handleCloseStockModal" @update:show-modal="showStockModal = $event" />
     </div>
 </template>
 
@@ -247,6 +253,7 @@ import { useCartAnimation } from '@/composables/useCartAnimation'
 import { getProductById } from '@/api/products/get'
 import QuantitySelector from '@/components/common/user/QuantitySelector.vue'
 import BackButton from '@/components/common/user/BackButton.vue'
+import DeleteModal from '@/components/common/admin/DeleteModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -263,6 +270,7 @@ const localErrorMessage = ref('')
 const productReviews = ref([])
 const isLoadingReviews = ref(false)
 const selectedRatingFilter = ref(null) // null = tất cả, 1-5 = filter theo rating
+const showStockModal = ref(false)
 
 
 
@@ -316,10 +324,56 @@ const handleAddToCart = async (event) => {
 }
 //===================================cập nhật số lượng===================================
 const updateQuantity = (newValue) => {
-    quantity.value = newValue
+    // Nếu newValue là string rỗng hoặc không hợp lệ (người dùng đang xóa), giữ nguyên
+    if (newValue === '' || newValue === null || newValue === undefined) {
+        // Không làm gì, để handleBlur xử lý
+        return
+    }
+
+    // Chuyển đổi sang number nếu cần
+    const numValue = typeof newValue === 'number' ? newValue : parseInt(newValue)
+
+    // Nếu không phải số hợp lệ, giữ nguyên
+    if (isNaN(numValue)) {
+        return
+    }
+
+    // Nếu là 0, set về 1 (mặc định)
+    if (numValue === 0) {
+        quantity.value = 1
+        return
+    }
+
+    // Kiểm tra nếu vượt quá số lượng tồn kho
+    if (product.value && numValue > product.value.quantity) {
+        showStockModal.value = true
+        quantity.value = product.value.quantity || 1
+        return
+    }
+
+    // Đảm bảo giá trị không nhỏ hơn 1
+    if (numValue < 1) {
+        quantity.value = 1
+        return
+    }
+
+    quantity.value = numValue
+}
+
+// Xử lý khi số lượng vượt quá max
+const handleExceedMax = (value) => {
+    if (product.value && value > product.value.quantity) {
+        showStockModal.value = true
+        quantity.value = product.value.quantity || 1
+    }
+}
+
+// Đóng modal thông báo
+const handleCloseStockModal = () => {
+    showStockModal.value = false
 }
 //===================================xử lý thanh toán===================================
-const handleCheckout = async () => {
+const handleCheckout = () => {
     if (!canAddToCart.value) return
 
     const userId = authStore.userId
@@ -329,32 +383,24 @@ const handleCheckout = async () => {
         return
     }
 
-    try {
-        // Thêm sản phẩm vào giỏ hàng trước
-        await cartStore.addToCart(product.value, quantity.value, userId)
-
-        // Chuẩn bị thông tin sản phẩm đã chọn để truyền đến CheckInfoPage
-        const selectedItem = {
-            product_id: product.value.product_id || product.value.id,
-            product_name: getProductName(product.value),
-            img_url: getProductImage(product.value),
-            price: product.value.price,
-            quantity: quantity.value,
-            stock: product.value.quantity
-        }
-
-        // Điều hướng trực tiếp đến CheckInfoPage với thông tin sản phẩm
-        router.push({
-            name: 'checkout',
-            query: {
-                selectedItems: JSON.stringify([selectedItem]),
-                fromProductDetail: 'true'
-            }
-        })
-    } catch (error) {
-        const errorMessage = error.message || error.originalError?.response?.data?.message || 'Đã có lỗi xảy ra'
-        alert(`Lỗi khi thêm sản phẩm vào giỏ hàng: ${errorMessage}`)
+    // Chuẩn bị thông tin sản phẩm đã chọn để truyền đến CheckInfoPage
+    const selectedItem = {
+        product_id: product.value.product_id || product.value.id,
+        product_name: getProductName(product.value),
+        img_url: getProductImage(product.value),
+        price: product.value.price,
+        quantity: quantity.value,
+        stock: product.value.quantity
     }
+
+    // Điều hướng trực tiếp đến CheckInfoPage với thông tin sản phẩm (không thêm vào giỏ hàng)
+    router.push({
+        name: 'checkout',
+        query: {
+            selectedItems: JSON.stringify([selectedItem]),
+            fromProductDetail: 'true'
+        }
+    })
 }
 
 const formatPrice = (price) => {

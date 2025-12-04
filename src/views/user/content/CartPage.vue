@@ -43,7 +43,7 @@
                                 class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
                             <span class="font-semibold text-gray-800">Chọn tất cả</span>
                         </label>
-                        <span class="text-sm text-gray-600">{{ selectedCount }} / {{ cartStore.cartItems.length }} sản
+                        <span class="text-sm text-gray-600">{{ selectedCount }} / {{ selectableItemsCount }} sản
                             phẩm được chọn</span>
                     </div>
 
@@ -51,13 +51,10 @@
                         'bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row gap-4 relative'
 
                     ]">
-                        <!-- Checkbox -->
-                        <div class="flex items-start">
+                        <!-- Checkbox - Ẩn khi sản phẩm hết hàng hoặc ngưng kinh doanh -->
+                        <div v-if="!isOutOfStock(item) && !isDeleted(item)" class="flex items-start">
                             <input type="checkbox" :checked="isItemSelected(item)" @change="toggleItemSelection(item)"
-                                :disabled="isOutOfStock(item)" :class="[
-                                    'w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1',
-                                    isOutOfStock(item) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
-                                ]">
+                                class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1 cursor-pointer">
                         </div>
 
                         <!-- Overlay sản phẩm hết hàng -->
@@ -73,7 +70,7 @@
                                 <p class="text-lg font-semibold text-red-500">Sản phẩm tạm hết</p>
                             </div>
                         </div>
-                       
+
 
                         <!-- Product Image -->
                         <div class="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
@@ -121,9 +118,9 @@
                                     :class="{ 'pointer-events-none opacity-70': isOutOfStock(item) || isDeleted(item) }">
                                     <QuantitySelector :model-value="item.quantity"
                                         @update:model-value="(value) => updateItemQuantityAndSelected(item, value)"
-                                        :min="1" :max="getMaxQuantity(item)"
-                                        :disabled="isOutOfStock(item) || isDeleted(item)" label="Số lượng mua:"
-                                        :show-error="true" />
+                                        @exceed-max="(value) => handleExceedMaxInCart(item, value)" :min="1"
+                                        :max="getMaxQuantity(item)" :disabled="isOutOfStock(item) || isDeleted(item)"
+                                        label="Số lượng mua:" :show-error="true" />
                                 </div>
 
                                 <!-- Remove Button -->
@@ -137,7 +134,7 @@
 
                         <!-- Item Total -->
                         <div class="flex-shrink-0 text-right"
-                            :class="{ 'pointer-events-none opacity-50': isOutOfStock(item)|| isDeleted(item) }">
+                            :class="{ 'pointer-events-none opacity-50': isOutOfStock(item) || isDeleted(item) }">
                             <p class="text-lg font-bold text-gray-800">
                                 {{ formatPrice((item.price || 0) * item.quantity) }}
                             </p>
@@ -208,6 +205,10 @@
         <!-- Modal xóa sản phẩm -->
         <DeleteModal :showModal="showDeleteModal" :mode="deleteModalMode" :message="deleteModalMessage"
             @confirm="handleDeleteConfirm" @cancel="handleDeleteCancel" @close="handleDeleteClose" />
+
+        <!-- Modal thông báo số lượng không đủ -->
+        <DeleteModal :show-modal="showStockModal" mode="info" title="Số lượng không đủ" :message="stockModalMessage"
+            @close="handleCloseStockModal" @update:show-modal="showStockModal = $event" />
     </div>
 </template>
 
@@ -241,11 +242,21 @@ const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
 const deleteModalMode = ref('confirm')
 
+// Modal thông báo số lượng không đủ
+const showStockModal = ref(false)
+const currentMaxQuantity = ref(0)
+const currentProductName = ref('')
+
 const deleteModalMessage = computed(() => {
     if (itemToDelete.value) {
         return `Bạn có chắc muốn xóa "${getProductName(itemToDelete.value)}" khỏi giỏ hàng?`
     }
     return ''
+})
+
+// Message cho modal thông báo số lượng
+const stockModalMessage = computed(() => {
+    return `Số lượng sản phẩm "${currentProductName.value}" trong kho không đủ. Số lượng tối đa có thể mua là ${currentMaxQuantity.value} sản phẩm.`
 })
 
 // Debug computed để kiểm tra
@@ -270,12 +281,19 @@ const getUserId = () => {
 
 
 //===================================CHECK BOX===================================
-// Số lượng items được selected
+// Số lượng items được selected (chỉ đếm sản phẩm có thể chọn được)
 const selectedCount = computed(() => {
-    return selectedItems.value.size
+    return cartStore.cartItems
+        .filter(item => {
+            const identifier = item.cart_detail_id || item.product_id || item.id
+            return selectedItems.value.has(identifier) && !isOutOfStock(item) && !isDeleted(item)
+        }).length
 })
 
-
+// Số lượng sản phẩm có thể chọn được (không hết hàng và chưa bị xóa)
+const selectableItemsCount = computed(() => {
+    return cartStore.cartItems.filter(item => !isOutOfStock(item) && !isDeleted(item)).length
+})
 
 // Tính tổng số lượng của các items được selected
 const selectedTotalItems = computed(() => {
@@ -288,12 +306,13 @@ const selectedTotalItems = computed(() => {
 })
 
 // ===========================check all==========================
-// tính toán xem item đã được chọn hết chưa
+// tính toán xem item đã được chọn hết chưa (chỉ kiểm tra sản phẩm có thể chọn được)
 //.every() sẽ kiểm tra mọi phần tử trong mảng có thỏa điều kiện hay không.
 //.has(id) → kiểm tra xem ID đó có nằm trong Set
 const isAllSelected = computed(() => {
-    if (cartStore.cartItems.length === 0) return false
-    return cartStore.cartItems.every(item => {
+    const selectableItems = cartStore.cartItems.filter(item => !isOutOfStock(item) && !isDeleted(item))
+    if (selectableItems.length === 0) return false
+    return selectableItems.every(item => {
         const identifier = item.cart_detail_id
         return selectedItems.value.has(identifier)
     })
@@ -306,19 +325,21 @@ const toggleSelectAll = async (event) => {
 
     // Optimistic update: cập nhật UI ngay lập tức
     if (shouldSelect) {
-        // Chọn tất cả (chỉ chọn sản phẩm còn hàng)
+        // Chọn tất cả (chỉ chọn sản phẩm còn hàng và chưa bị xóa)
         cartStore.cartItems.forEach(item => {
-            // Bỏ qua sản phẩm hết hàng
-            if (isOutOfStock(item)) return
+            // Bỏ qua sản phẩm hết hàng hoặc đã bị xóa
+            if (isOutOfStock(item) || isDeleted(item)) return
 
             const identifier = item.cart_detail_id
             selectedItems.value.add(identifier)
             item.selected = true
         })
     } else {
-        // Bỏ chọn tất cả
-        selectedItems.value.clear()
+        // Bỏ chọn tất cả (chỉ bỏ chọn sản phẩm có thể chọn được)
         cartStore.cartItems.forEach(item => {
+            if (isOutOfStock(item) || isDeleted(item)) return
+            const identifier = item.cart_detail_id
+            selectedItems.value.delete(identifier)
             item.selected = false
         })
     }
@@ -327,9 +348,9 @@ const toggleSelectAll = async (event) => {
     // Sử dụng Promise.all để gọi song song, không block UI
     if (userId) {
         try {
-            // Tạo array các promise để gọi API đồng loạt (chỉ cho sản phẩm còn hàng)
+            // Tạo array các promise để gọi API đồng loạt (chỉ cho sản phẩm còn hàng và chưa bị xóa)
             const updatePromises = cartStore.cartItems
-                .filter(item => !isOutOfStock(item)) // Chỉ cập nhật sản phẩm còn hàng
+                .filter(item => !isOutOfStock(item) && !isDeleted(item)) // Chỉ cập nhật sản phẩm còn hàng và chưa bị xóa
                 .map(item => {
                     const identifier = item.cart_detail_id
                     return cartStore.updateQuantity(identifier, item.quantity, shouldSelect)
@@ -407,7 +428,7 @@ const isOutOfStock = (item) => {
 }
 const isDeleted = (item) => {
     const deletedFromItem = item?._deleted
-    const deleted = deletedFromItem 
+    const deleted = deletedFromItem
     const result = deleted === true
     return result
 }
@@ -437,8 +458,12 @@ const updateItemQuantityAndSelected = async (item, newQuantity) => {
 
     const maxQuantity = getMaxQuantity(item)
     if (newQuantity > maxQuantity) {
+        // Hiển thị modal thông báo
+        currentMaxQuantity.value = maxQuantity
+        currentProductName.value = getProductName(item)
+        showStockModal.value = true
+        // Tự động set về maxQuantity
         await cartStore.updateQuantity(identifier, maxQuantity, isSelected)
-        alert(`Số lượng tối đa có thể mua là ${maxQuantity} sản phẩm`)
         return
     }
 
@@ -467,6 +492,27 @@ const updateItemQuantityAndSelected = async (item, newQuantity) => {
         console.error('Lỗi cập nhật số lượng:', error)
         alert('Có lỗi xảy ra khi cập nhật số lượng. Vui lòng thử lại!')
     }
+}
+
+// Xử lý khi số lượng vượt quá max trong giỏ hàng
+const handleExceedMaxInCart = async (item, value) => {
+    const identifier = item.cart_detail_id
+    const isSelected = isItemSelected(item)
+    const maxQuantity = getMaxQuantity(item)
+
+    if (value > maxQuantity) {
+        // Hiển thị modal thông báo
+        currentMaxQuantity.value = maxQuantity
+        currentProductName.value = getProductName(item)
+        showStockModal.value = true
+        // Tự động set về maxQuantity
+        await cartStore.updateQuantity(identifier, maxQuantity, isSelected)
+    }
+}
+
+// Đóng modal thông báo số lượng
+const handleCloseStockModal = () => {
+    showStockModal.value = false
 }
 
 //===================================xóa item===================================

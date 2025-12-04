@@ -177,6 +177,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue"
+import { storeToRefs } from "pinia"
 import {
   Chart as ChartJS,
   Title,
@@ -189,7 +190,7 @@ import {
   LineElement,
   PointElement,
 } from "chart.js"
-import { Bar, Pie } from "vue-chartjs"
+import { Bar } from "vue-chartjs"
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, LineElement, PointElement)
 
 // Custom plugin để hiển thị phần trăm trong biểu đồ tròn (chỉ cho Pie chart)
@@ -275,12 +276,15 @@ const barRevenuePlugin = {
 // Đăng ký plugins
 ChartJS.register(percentagePlugin, barRevenuePlugin)
 import { useAsyncOperation } from '@/composables/useAsyncOperation'
-import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear, getTopProductsByMonth, getTopProductsByYear } from '@/api/statistics/get'
+import { getStatisticsByDate, getStatisticsByMonth, getStatisticsByYear } from '@/api/statistics/get'
 import { getAllUser } from '@/api/user/get'
 import { getAllProducts } from '@/api/products/get'
+import { useStatisticsStore } from '@/stores/statistics'
 import { Users, Package, DollarSign, ShoppingCart } from "lucide-vue-next"
 
 const { isLoading, errorMessage, resetError, executeAsync } = useAsyncOperation()
+const statisticsStore = useStatisticsStore()
+const { totalProductsSoldByMonth, totalProductsSoldByYear } = storeToRefs(statisticsStore)
 
 // Filter state
 const viewType = ref('month') // 'day', 'month' or 'year'
@@ -344,22 +348,23 @@ const onMonthYearChange = () => {
 
 // Statistics data
 const statistics = ref(null)
-const topProducts = ref([])
 
 // Total counts
 const totalUsers = ref(0)
 const totalProducts = ref(0)
 
-// Computed property để tính tổng số lượng sản phẩm đã bán theo bộ lọc
+// Computed property để lấy tổng số lượng sản phẩm đã bán từ store
 const totalProductsSold = computed(() => {
-  if (!topProducts.value || topProducts.value.length === 0) {
-    return 0
-  }
-  // Tính tổng số lượng từ top products (mỗi product có totalQuantitySold)
-  return topProducts.value.reduce((total, product) => {
-    const quantity = product.totalQuantitySold || 0
-    return total + Number(quantity)
-  }, 0)
+  const value = viewType.value === 'month'
+    ? totalProductsSoldByMonth.value
+    : totalProductsSoldByYear.value
+  console.log('📊 totalProductsSold computed:', {
+    viewType: viewType.value,
+    value: value,
+    byMonth: totalProductsSoldByMonth.value,
+    byYear: totalProductsSoldByYear.value
+  })
+  return value || 0
 })
 
 // Available years (current year and 2 years before)
@@ -416,6 +421,9 @@ const formatCurrency = (amount) => {
 
 // Handle view type change
 const onViewTypeChange = () => {
+  // Reset store values khi thay đổi viewType
+  statisticsStore.totalProductsSoldByMonth = 0
+  statisticsStore.totalProductsSoldByYear = 0
   loadStatistics()
 }
 
@@ -462,11 +470,10 @@ const loadStatistics = async () => {
         statistics.value = statsResponse.data.data
       }
 
-      // Load top products by month
-      const topProductsResponse = await getTopProductsByMonth(selectedYear.value, selectedMonth.value, 10)
-      if (topProductsResponse.data?.success && topProductsResponse.data?.data) {
-        topProducts.value = topProductsResponse.data.data
-      }
+      // Load total products sold by month
+      console.log('🔄 Loading total products sold by month:', selectedYear.value, selectedMonth.value)
+      await statisticsStore.getTotalProductsSoldByMonthStore(selectedYear.value, selectedMonth.value)
+      console.log('✅ After load, store value:', statisticsStore.totalProductsSoldByMonth)
 
       // Load daily data for bar chart (hiển thị theo ngày trong tháng)
       await loadDailyDataForMonth()
@@ -477,11 +484,10 @@ const loadStatistics = async () => {
         statistics.value = statsResponse.data.data
       }
 
-      // Load top products by year
-      const topProductsResponse = await getTopProductsByYear(selectedYear.value, 10)
-      if (topProductsResponse.data?.success && topProductsResponse.data?.data) {
-        topProducts.value = topProductsResponse.data.data
-      }
+      // Load total products sold by year
+      console.log('🔄 Loading total products sold by year:', selectedYear.value)
+      await statisticsStore.getTotalProductsSoldByYearStore(selectedYear.value)
+      console.log('✅ After load, store value:', statisticsStore.totalProductsSoldByYear)
 
       // Load monthly data for bar chart
       await loadMonthlyDataForYear()
@@ -518,53 +524,46 @@ const loadMonthlyDataForYear = async () => {
   monthlyRevenueData.value = results.sort((a, b) => a.month - b.month)
 }
 
-// Bar chart data - Doanh thu và số đơn hàng
+// Bar chart data - Doanh thu
 const barData = computed(() => {
   const labels = []
   const revenueData = []
-  const ordersData = []
 
   if (viewType.value === 'month') {
-    // Hiển thị doanh thu và số đơn hàng theo tất cả các ngày trong tháng
+    // Hiển thị doanh thu theo tất cả các ngày trong tháng
     const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
 
     if (dailyRevenueData.value.length > 0) {
       // Tạo map để dễ tìm kiếm
       const revenueMap = new Map()
-      const ordersMap = new Map()
       dailyRevenueData.value.forEach(item => {
         revenueMap.set(item.day, item.revenue)
-        ordersMap.set(item.day, item.orders)
       })
 
       // Hiển thị tất cả các ngày trong tháng
       for (let day = 1; day <= daysInMonth; day++) {
         labels.push(`Ngày ${day}`)
         revenueData.push(revenueMap.get(day) || 0)
-        ordersData.push(ordersMap.get(day) || 0)
       }
     } else {
       // Fallback: hiển thị tất cả các ngày với giá trị 0
       for (let day = 1; day <= daysInMonth; day++) {
         labels.push(`Ngày ${day}`)
         revenueData.push(0)
-        ordersData.push(0)
       }
     }
   } else if (viewType.value === 'year') {
-    // Hiển thị doanh thu và số đơn hàng theo 12 tháng trong năm
+    // Hiển thị doanh thu theo 12 tháng trong năm
     if (monthlyRevenueData.value.length > 0) {
       monthlyRevenueData.value.forEach(item => {
         labels.push(`Tháng ${item.month}`)
         revenueData.push(item.revenue)
-        ordersData.push(item.orders)
       })
     } else {
       // Fallback: hiển thị 12 tháng với giá trị 0
       for (let month = 1; month <= 12; month++) {
         labels.push(`Tháng ${month}`)
         revenueData.push(0)
-        ordersData.push(0)
       }
     }
   }
@@ -580,21 +579,6 @@ const barData = computed(() => {
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,
         yAxisID: 'y',
-      },
-      {
-        type: 'line',
-        label: "Số Đơn Hàng",
-        data: ordersData,
-        borderColor: "rgba(255, 99, 132, 1)",
-        backgroundColor: "rgba(255, 99, 132, 0.1)",
-        borderWidth: 2,
-        fill: false,
-        tension: 0.4,
-        pointRadius: 4,
-        pointBackgroundColor: "rgba(255, 99, 132, 1)",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        yAxisID: 'y1',
       },
     ],
   }
@@ -683,11 +667,7 @@ const barOptions = computed(() => ({
     tooltip: {
       callbacks: {
         label: function (context) {
-          if (context.datasetIndex === 0) {
-            return `Doanh Thu: ${formatCurrency(context.parsed.y)}`
-          } else {
-            return `Số Đơn Hàng: ${formatNumber(context.parsed.y)}`
-          }
+          return `Doanh Thu: ${formatCurrency(context.parsed.y)}`
         }
       }
     }
@@ -705,23 +685,6 @@ const barOptions = computed(() => ({
       title: {
         display: true,
         text: 'Doanh Thu (VNĐ)'
-      }
-    },
-    y1: {
-      type: 'linear',
-      position: 'right',
-      beginAtZero: true,
-      ticks: {
-        callback: function (value) {
-          return formatNumber(value)
-        }
-      },
-      grid: {
-        drawOnChartArea: false,
-      },
-      title: {
-        display: true,
-        text: 'Số Đơn Hàng'
       }
     },
     x: {

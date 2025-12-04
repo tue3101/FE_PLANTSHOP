@@ -22,8 +22,8 @@
                 controls-class="mb-2" @update:selectedActive="selectedActive = $event">
 
                 <template #default="{ items }">
-                    <CommonTable :headers="['ID', 'EMAIL', 'TÊN NGƯỜI DÙNG', 'SĐT', 'ĐỊA CHỈ', 'VAI TRÒ']"
-                        :keys="['user_id', 'email', 'username', 'phone_number', 'address', 'role']" :data="items"
+                    <CommonTable :headers="['ID', 'EMAIL', 'TÊN NGƯỜI DÙNG', 'SĐT', 'VAI TRÒ']"
+                        :keys="['user_id', 'email', 'username', 'phone_number', 'role']" :data="items"
                         title-class="font-bold text-2xl ">
                         <template #actions="{ item }">
                             <ButtonCommon :selected-active="selectedActive" :item="item" @view="handleViewDetail"
@@ -51,10 +51,16 @@
             :fields="userFields" :options="{ roles: roleOptions }" @close="closeViewModal"
             @update:showModal="showViewModal = $event" />
 
-        <!-- Modals -->
+        <!-- Delete Modals -->
         <DeleteModal :showModal="showDeleteConfirmModal" mode="confirm" @confirm="handleDeleteConfirm"
             @cancel="handleDeleteCancel" />
-        <DeleteModal :showModal="showDeleteSuccessModal" mode="success" @close="handleDeleteSuccessClose" />
+        <DeleteModal :showModal="showDeleteSuccessModal" mode="delete-success" @close="handleDeleteSuccessClose" />
+
+        <!-- Update Success Modal -->
+        <DeleteModal :showModal="showUpdateSuccessModal" mode="update-success" @close="handleUpdateSuccessClose" />
+
+        <!-- Restore Success Modal -->
+        <DeleteModal :showModal="showRestoreSuccessModal" mode="restore-success" @close="handleRestoreSuccessClose" />
     </div>
 </template>
 <script setup>
@@ -187,7 +193,7 @@ const handleAddUser = async (userData) => {
             sessionStorage.setItem('register_username', userData.username)
             sessionStorage.setItem('register_password', userData.password)
             sessionStorage.setItem('register_role', userData.role)
-            sessionStorage.setItem('otp_countdown', '60')
+            sessionStorage.setItem('otp_countdown', '30')
             sessionStorage.setItem('admin_add_user', 'true') // Đánh dấu là admin đang thêm user
 
             // Đóng modal
@@ -217,6 +223,7 @@ const handleAddUser = async (userData) => {
 
 // ===========================Update Modal==========================
 const showUpdateModal = ref(false)
+const showUpdateSuccessModal = ref(false)
 const updateError = ref('')
 const selectedUserForUpdate = ref(null)
 
@@ -233,6 +240,11 @@ const closeUpdateModal = () => {
     selectedUserForUpdate.value = null
     updateError.value = ''
 }
+
+const handleUpdateSuccessClose = () => {
+    showUpdateSuccessModal.value = false
+}
+
 const handleUpdateUser = async (userData) => {
     updateError.value = ''
     const token = authStore.accessToken || ''
@@ -251,6 +263,7 @@ const handleUpdateUser = async (userData) => {
         await refreshUsersData(token)
         closeUpdateModal()
         updateError.value = ''
+        showUpdateSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể cập nhật người dùng!',
         onError: (error) => {
@@ -313,6 +326,12 @@ async function handleDeleteConfirm() {
 
 
 //==========================restore==========================
+const showRestoreSuccessModal = ref(false)
+
+const handleRestoreSuccessClose = () => {
+    showRestoreSuccessModal.value = false
+}
+
 async function handleRestore(item) {
     const userId = item.user_id
     const token = authStore.accessToken || ''
@@ -324,6 +343,7 @@ async function handleRestore(item) {
     await executeAsync(async () => {
         await userStore.restoreUserStore(userId, token)
         await refreshUsersData(token)
+        showRestoreSuccessModal.value = true
     }, {
         defaultErrorMessage: 'Không thể khôi phục người dùng!',
         onError: (error) => {
@@ -394,9 +414,8 @@ const userFields = computed(() => [
     {
         key: 'address',
         label: 'Địa chỉ',
-        type: 'text',
-        required: false,
-        placeholder: 'Nhập địa chỉ'
+        type: 'address',
+        required: false
     },
     {
         key: 'password',
@@ -440,6 +459,8 @@ const refreshUsersData = async (token) => {
         username: u.username,
         phone_number: u.phone_number,
         address: u.address,
+        district_id: u.district_id || null,
+        city_id: u.city_id || null,
         role: u.role,
         is_deleted: u.is_deleted || false,
     }))
@@ -451,6 +472,8 @@ const refreshUsersData = async (token) => {
         username: u.username,
         phone_number: u.phone_number,
         address: u.address,
+        district_id: u.district_id || null,
+        city_id: u.city_id || null,
         role: u.role,
         is_deleted: u.is_deleted ?? true,
     }))

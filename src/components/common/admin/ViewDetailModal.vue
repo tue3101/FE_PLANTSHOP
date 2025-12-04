@@ -33,7 +33,8 @@
                                         {{ field.label }}:
                                     </div>
                                     <div class="flex-1 text-gray-900">
-                                        <span>{{ formatValue(item[field.key], field) }}</span>
+                                        <span v-if="field.type === 'address'">{{ formatAddress(item, field) }}</span>
+                                        <span v-else>{{ formatValue(item[field.key], field) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -60,6 +61,7 @@
 import { ref, computed } from 'vue'
 import { useDragModal } from '@/composables/useDragModal'
 import { X } from 'lucide-vue-next'
+import { getCityById, getDistrictById } from '@/constants/locations'
 
 const props = defineProps({
     showModal: {
@@ -90,6 +92,8 @@ const emit = defineEmits(['close', 'update:showModal'])
 // Drag functionality
 const modalRef = ref(null)
 const { position, handleMouseDown } = useDragModal(props)
+
+// Không cần location store nữa, sử dụng dữ liệu cố định từ constants
 
 const displayFields = computed(() => {
     return props.fields.filter(field => {
@@ -170,6 +174,48 @@ const formatValue = (value, field) => {
     }
 
     return value
+}
+
+// Format địa chỉ hoàn chỉnh (ghép address + district + city)
+const formatAddress = (item, field) => {
+    if (!item) return 'Không có dữ liệu'
+
+    const address = item.address || item[field.key] || ''
+    const districtId = item.district_id
+    const cityId = item.city_id || 1
+
+    // Nếu địa chỉ rỗng và không có district_id
+    if (!address && !districtId) {
+        return 'Không có dữ liệu'
+    }
+
+    // Nếu địa chỉ đã là địa chỉ hoàn chỉnh, hiển thị trực tiếp
+    if (address && (address.includes('Hồ Chí Minh') || address.includes('Bà Rịa') || address.includes('Vũng Tàu'))) {
+        return address
+    }
+
+    // Nếu có district_id, tìm tên quận và thành phố để ghép lại thành địa chỉ hoàn chỉnh
+    if (districtId) {
+        const district = getDistrictById(districtId)
+        const districtName = district ? district.name : ''
+        const city = getCityById(cityId)
+        const cityName = city ? city.name : ''
+
+        if (districtName && cityName) {
+            // Ghép địa chỉ hoàn chỉnh: "Địa chỉ, Quận, Thành phố"
+            const parts = []
+            if (address && address.trim()) {
+                parts.push(address.trim())
+            }
+            parts.push(districtName)
+            parts.push(cityName)
+
+            return parts.filter(p => p).join(', ')
+        }
+    }
+
+    // Nếu không tìm được quận hoặc không có district_id, chỉ hiển thị địa chỉ hiện có
+    return address || 'Không có dữ liệu'
 }
 
 const getImageUrl = (url) => {
