@@ -1,8 +1,6 @@
 <template>
   <header class="bg-white shadow-md sticky top-0 z-50">
-
     <div class="bg-green-800 text-white px-20 py-2 flex items-center justify-between">
-
       <div class="flex items-center space-x-4">
         <div class="flex items-center space-x-2">
           <Clock class="w-5 h-5" />
@@ -26,21 +24,30 @@
 
         <!-- Logged In - User Menu -->
         <div class="relative z-[100]">
-          <button @click="toggleUserMenu" class="cursor-pointer hover:opacity-80 flex items-center gap-2">
+          <button
+            @click="toggleUserMenu"
+            class="cursor-pointer hover:opacity-80 flex items-center gap-2"
+          >
             <User class="w-5 h-5" />
             <span>{{ getUsername() }}</span>
           </button>
 
           <!-- Dropdown Menu -->
-          <div v-if="showUserMenu"
+          <div
+            v-if="showUserMenu"
             class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
-            @click.stop>
-            <button @click="handleViewProfile"
-              class="w-full text-left px-4 py-2 text-sm text-black hover:bg-gray-100 transition-colors cursor-pointer">
+            @click.stop
+          >
+            <button
+              @click="handleViewProfile"
+              class="w-full text-left px-4 py-2 text-sm text-black hover:bg-gray-100 transition-colors cursor-pointer"
+            >
               Xem thông tin
             </button>
-            <button @click="handleLogout"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 transition-colors cursor-pointer">
+            <button
+              @click="handleLogout"
+              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+            >
               Đăng xuất
             </button>
           </div>
@@ -49,38 +56,53 @@
 
       <!-- Overlay để đóng dropdown khi click bên ngoài -->
       <div v-if="showUserMenu" @click="closeUserMenu" class="fixed inset-0 z-[90]"></div>
-
     </div>
 
     <!-- Bottom Navigation -->
     <div class="px-10 bg-white h-20 border-b relative z-50">
       <div class="flex justify-between items-center h-20">
         <div class="flex items-center h-full">
-          <div class="w-50 h-15  cursor-pointer">
-            <RouterLink to="/"><img src="/img/logo.png" alt="Cỏ ba lá" class="w-full h-full" /></RouterLink>
+          <div class="w-50 h-15 cursor-pointer">
+            <RouterLink to="/"
+              ><img src="/img/logo.png" alt="Cỏ ba lá" class="w-full h-full"
+            /></RouterLink>
           </div>
         </div>
         <div class="flex items-center flex-nowrap relative z-50">
           <template v-for="item in headerItems" :key="item.name">
             <!-- Danh mục Menu (Multi-level) -->
-            <div v-if="item.name === 'Danh Mục'" class="relative z-[100]" @mouseenter="handleCategoryMenuEnter"
-              @mouseleave="handleCategoryMenuLeave">
-              <button @click.stop="toggleCategoryMenu"
+            <div
+              v-if="item.name === 'Danh Mục'"
+              class="relative z-[100]"
+              @mouseenter="handleCategoryMenuEnter"
+              @mouseleave="handleCategoryMenuLeave"
+            >
+              <button
+                @click.stop="toggleCategoryMenu"
                 class="p-4 h-20 text-xl font-bold text-green-700 hover:text-green-500 flex items-center transition-all duration-200 cursor-pointer"
-                :class="route.path === item.to ? '!text-green-500' : ''">
+                :class="route.path === item.to ? '!text-green-500' : ''"
+              >
                 <Menu class="w-6 h-6 mr-2" :class="{ 'rotate-180': showCategoryMenu }" />
                 <span>{{ item.name }}</span>
-
               </button>
 
               <!-- Dropdown Menu -->
-              <div v-if="showCategoryMenu && categories.length > 0" @mouseenter="handleCategoryMenuEnter"
+              <div
+                v-if="showCategoryMenu && categories.length > 0"
+                @mouseenter="handleCategoryMenuEnter"
                 @mouseleave="handleCategoryMenuLeave"
-                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]">
-                <div v-for="category in categories" :key="category.category_id" class="relative group">
-                  <router-link :to="`/product?category=${category.category_id}`"
+                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
+              >
+                <div
+                  v-for="category in categories"
+                  :key="category.category_id"
+                  class="relative group"
+                >
+                  <router-link
+                    :to="`/product?category=${category.category_id}`"
                     class="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    @click="showCategoryMenu = false">
+                    @click="showCategoryMenu = false"
+                  >
                     <span>{{ category.category_name }}</span>
                     <!-- <ChevronRight v-if="category.subcategories && category.subcategories.length > 0"
                       class="w-4 h-4 text-gray-400" /> -->
@@ -98,37 +120,45 @@
                 </div>
               </div>
               <!-- Empty state nếu chưa có categories -->
-              <div v-else-if="showCategoryMenu && categories.length === 0"
-                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]">
+              <div
+                v-else-if="showCategoryMenu && categories.length === 0"
+                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
+              >
                 <div class="px-4 py-2 text-sm text-gray-500">Đang tải danh mục...</div>
               </div>
             </div>
 
             <!-- Các items thông thường -->
-            <router-link v-else :to="item.to"
+            <router-link
+              v-else
+              :to="item.to"
               class="p-4 h-20 text-xl font-bold text-green-700 hover:text-green-500 flex items-center transition-all duration-200"
-              :class="route.path === item.to ? '!text-green-500' : ''">
+              :class="route.path === item.to ? '!text-green-500' : ''"
+            >
               {{ item.name }}
             </router-link>
           </template>
         </div>
 
-
         <div class="flex-1 max-w-md mx-8">
-          <SearchCommon v-model="searchQuery" mode="user" :show-category-filter="false" :show-suggestions="true" />
+          <SearchCommon
+            v-model="searchQuery"
+            mode="user"
+            :show-category-filter="false"
+            :show-suggestions="true"
+          />
         </div>
-
 
         <!-- Cart -->
         <div class="relative cart-icon-container" @click="handleCartClick">
           <ShoppingCart class="w-10 h-10 text-green-700 hover:text-green-500 cursor-pointer" />
-          <span v-if="cartItemsCount > 0"
-            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold">
-            {{ cartItemsCount > 99 ? '99+' : cartItemsCount }}
+          <span
+            v-if="cartItemsCount > 0"
+            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold"
+          >
+            {{ cartItemsCount > 99 ? "99+" : cartItemsCount }}
           </span>
         </div>
-
-
       </div>
     </div>
   </header>
@@ -153,13 +183,13 @@ const cartStore = useCartStore()
 const productStore = useProductStore()
 const showUserMenu = ref(false)
 const showCategoryMenu = ref(false)
-const searchQuery = ref('')
+const searchQuery = ref("")
 
 // Hàm chung để load user info (tránh trùng lặp code)
 const loadUserInfo = async () => {
   if (authStore.isAuthenticated && !userStore.userInfo) {
     try {
-      await userStore.getInfo(authStore.accessToken)
+      await userStore.getInfo()
     } catch (error) {
       console.error(error)
     }
@@ -171,7 +201,7 @@ const loadCategories = async () => {
   try {
     await productStore.getCategories()
   } catch (error) {
-    console.error('Error loading categories:', error)
+    console.error("Error loading categories:", error)
   }
 }
 
@@ -187,7 +217,7 @@ const loadCart = async () => {
       await cartStore.loadCartFromBackend(authStore.userId)
     } catch (error) {
       // Không hiển thị lỗi nếu giỏ hàng trống - đây là trạng thái bình thường
-      console.log('Cart loaded (may be empty):', error)
+      console.log("Cart loaded (may be empty):", error)
     }
   }
 }
@@ -200,12 +230,15 @@ onMounted(() => {
 })
 
 // Theo dõi khi đăng nhập
-watch(() => authStore.isAuthenticated, (isAuthenticated) => {
-  loadUserInfo()
-  if (isAuthenticated) {
-    loadCart()
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    loadUserInfo()
+    if (isAuthenticated) {
+      loadCart()
+    }
   }
-})
+)
 
 // Toggle user menu
 const toggleUserMenu = () => {
@@ -249,15 +282,15 @@ const getUsername = () => {
     return userStore.userInfo.username
   }
   if (userStore.userInfo?.email) {
-    return userStore.userInfo.email.split('@')[0]
+    return userStore.userInfo.email.split("@")[0]
   }
-  return 'User'
+  return "User"
 }
 
 // xem thông tin
 const handleViewProfile = () => {
   closeUserMenu()
-  router.push('/userinfo')
+  router.push("/userinfo")
 }
 
 //  logout
@@ -266,7 +299,7 @@ const handleLogout = async () => {
     await authStore.logout()
     userStore.userInfo = null
     closeUserMenu()
-    router.push('/login')
+    router.push("/login")
   } catch (error) {
     console.error(error)
   }
@@ -279,9 +312,8 @@ const cartItemsCount = computed(() => {
 
 //click vào icon giỏ hàng
 const handleCartClick = () => {
-  router.push('/cart')
+  router.push("/cart")
 }
-
 
 const headerItems = computed(() => {
   const homePageRoute = router.options.routes.find((r) => r.name === "homepage")

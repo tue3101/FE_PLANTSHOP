@@ -1,7 +1,7 @@
 <script setup>
 import HeaderComponent from "@/components/common/user/HeaderComponent.vue"
 import FooterComponent from "@/components/common/user/FooterComponent.vue"
-import { useRoute } from 'vue-router'
+import { useRoute } from "vue-router"
 
 const route = useRoute()
 </script>

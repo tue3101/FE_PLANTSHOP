@@ -1,6 +1,8 @@
 <template>
-  <div class="flex flex-col justify-between  px-2 py-5 border-r border-gray-300 w-[300px]  "
-    :style="{ backgroundImage: 'url(/img/background_navbar.png)' }">
+  <div
+    class="flex flex-col justify-between px-2 py-5 border-r border-gray-300 w-[300px]"
+    :style="{ backgroundImage: 'url(/img/background_navbar.png)' }"
+  >
     <!-- Phần trên -->
     <div>
       <div class="flex flex-col items-center mt-6 mb-2">
@@ -11,9 +13,13 @@
       </div>
 
       <div class="flex flex-col items-center gap-1">
-        <router-link v-for="item in sidebarItems" :to="item.to" :key="item.name"
+        <router-link
+          v-for="item in sidebarItems"
+          :to="item.to"
+          :key="item.name"
           class="w-full p-2 rounded text-xl bg-gray-100/50 text-black hover:bg-white/70 hover:text-green-700 flex items-center gap-2 transition-all duration-200"
-          :class="route.path === item.to ? '!bg-green-700 !text-white' : ''">
+          :class="route.path === item.to ? '!bg-green-700 !text-white' : ''"
+        >
           <component :is="item.icon" class="size-5" />
           {{ item.name }}
         </router-link>
@@ -21,14 +27,15 @@
     </div>
 
     <div>
-      <button @click="handleLogout"
-        class="w-full p-2 justify-center rounded text-xl bg-red-600 text-white hover:bg-red-500 hover:text-white flex items-center gap-2 transition-all duration-200 cursor-pointer">
+      <button
+        @click="handleLogout"
+        class="w-full p-2 justify-center rounded text-xl bg-red-600 text-white hover:bg-red-500 hover:text-white flex items-center gap-2 transition-all duration-200 cursor-pointer"
+      >
         ĐĂNG XUẤT
       </button>
     </div>
   </div>
 </template>
-
 
 <script setup>
 import { useRouter, useRoute } from "vue-router"
@@ -40,7 +47,6 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
-
 
 // DRY  - Don't Repeat Yourself
 const sidebarItems = computed(() => {
@@ -60,7 +66,7 @@ const sidebarItems = computed(() => {
 const handleLogout = async () => {
   try {
     await authStore.logout()
-    router.push('/login')
+    router.push("/login")
   } catch (error) {
     console.error(error)
   }
@@ -68,7 +74,7 @@ const handleLogout = async () => {
 
 // Sử dụng computed để tự động cập nhật khi userStore.userInfo thay đổi
 const userEmail = computed(() => {
-  return userStore.userInfo?.email || ''
+  return userStore.userInfo?.email || ""
 })
 
 // Hàm load user info
@@ -77,7 +83,7 @@ const loadUserInfo = async () => {
     // Load lại user info nếu chưa có
     if (!userStore.userInfo) {
       try {
-        await userStore.getInfo(authStore.accessToken)
+        await userStore.getInfo()
       } catch (error) {
         console.error(error)
       }
@@ -91,9 +97,12 @@ onMounted(() => {
 })
 
 // Theo dõi khi authentication state thay đổi để load lại user info
-watch(() => authStore.isAuthenticated, (isAuthenticated) => {
-  if (isAuthenticated) {
-    loadUserInfo()
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      loadUserInfo()
+    }
   }
-})
+)
 </script>

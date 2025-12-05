@@ -1,32 +1,6 @@
-import AdminLayout from "@/layouts/admin/AdminLayout.vue"
-import HomeLayout from "@/layouts/user/UserLayout.vue"
-import CategoryView from "@/views/admin/content/CategoryView.vue"
-import DiscountView from "@/views/admin/content/DiscountView.vue"
-import HomeView from "@/views/admin/content/HomeView.vue"
-import OrderView from "@/views/admin/content/OrderView.vue"
-import ProductView from "@/views/admin/content/ProductView.vue"
-import ReviewView from "@/views/admin/content/ReviewView.vue"
-import UserView from "@/views/admin/content/UserView.vue"
-import ForgotPassView from "@/views/auth/ForgotPassView.vue"
-import LoginView from "@/views/auth/LoginView.vue"
-import RegisterView from "@/views/auth/RegisterView.vue"
-import VerifyOtpView from "@/views/auth/VerifyOtpView.vue"
-import ContactPage from "@/views/user/content/ContactPage.vue"
-import HomePage from "@/views/user/content/HomePage.vue"
-import ProductPage from "@/views/user/content/ProductPage.vue"
 import { Home, Package, Users, Folder, Percent, ShoppingCart, Star } from "lucide-vue-next"
 import { createRouter, createWebHistory } from "vue-router"
-import { useAuthStore } from '@/stores/auth'
-import CartPage from "@/views/user/content/CartPage.vue"
-import GoogleCallbackView from "@/views/auth/GoogleCallbackView.vue"
-import UserInfoPage from "@/views/components/UserInfoPage.vue"
-import CheckoutPage from "@/views/user/content/payment/CheckInfoPage.vue"
-import PaymentPage from "@/views/user/content/payment/PaymentPage.vue"
-import OrderPage from "@/views/user/content/order/OrderPage.vue"
-import OrderHistoryPage from "@/views/user/content/order/OrderHistoryPage.vue"
-import PaymentReturnPage from "@/views/user/content/payment/PaymentReturnPage.vue"
-import ReviewPage from "@/views/user/content/ReviewPage.vue"
-import ProductDetailPage from "@/components/common/user/product/ProductDetailPage.vue"
+import { useAuthStore } from "@/stores/auth"
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior(to, from, savedPosition) {
@@ -36,19 +10,19 @@ const router = createRouter({
     if (to.hash) {
       return {
         el: to.hash,
-        behavior: 'smooth'
+        behavior: "smooth",
       }
     }
     return {
       top: 0,
-      behavior: 'smooth'
+      behavior: "smooth",
     }
   },
   routes: [
     {
       path: "/",
       name: "homepage",
-      component: HomeLayout,
+      component: () => import("@/layouts/user/UserLayout.vue"),
       redirect: "/home",
       meta: {
         requiresAuth: true,
@@ -58,7 +32,7 @@ const router = createRouter({
         {
           path: "home",
           name: "home",
-          component: HomePage,
+          component: () => import("@/views/user/content/HomePage.vue"),
           meta: {
             isShow: true,
             title: "Trang Chủ",
@@ -69,7 +43,7 @@ const router = createRouter({
         {
           path: "product",
           name: "product",
-          component: ProductPage,
+          component: () => import("@/views/user/content/ProductPage.vue"),
           meta: {
             isShow: true,
             title: "Sản Phẩm",
@@ -90,7 +64,7 @@ const router = createRouter({
         {
           path: "product-detail/:id",
           name: "product-detail",
-          component: ProductDetailPage,
+          component: () => import("@/components/common/user/product/ProductDetailPage.vue"),
           meta: {
             isShow: false,
             title: "Chi tiết sản phẩm",
@@ -101,7 +75,7 @@ const router = createRouter({
         {
           path: "contact",
           name: "contact",
-          component: ContactPage,
+          component: () => import("@/views/user/content/ContactPage.vue"),
           meta: {
             isShow: true,
             title: "Liên Hệ",
@@ -112,7 +86,7 @@ const router = createRouter({
         {
           path: "userinfo",
           name: "userinfo",
-          component: UserInfoPage,
+          component: () => import("@/views/components/UserInfoPage.vue"),
           meta: {
             isShow: false,
             title: "Thông tin người dùng",
@@ -123,7 +97,7 @@ const router = createRouter({
         {
           path: "cart",
           name: "cart",
-          component: CartPage,
+          component: () => import("@/views/user/content/CartPage.vue"),
           meta: {
             isShow: false,
             title: "Giỏ hàng",
@@ -134,7 +108,7 @@ const router = createRouter({
         {
           path: "checkout",
           name: "checkout",
-          component: CheckoutPage,
+          component: () => import("@/views/user/content/payment/CheckInfoPage.vue"),
           meta: {
             isShow: false,
             title: "Kiểm tra thông tin giao hàng",
@@ -145,7 +119,7 @@ const router = createRouter({
         {
           path: "payment",
           name: "payment",
-          component: PaymentPage,
+          component: () => import("@/views/user/content/payment/PaymentPage.vue"),
           meta: {
             isShow: false,
             title: "Tạm tính giá tiền",
@@ -156,7 +130,7 @@ const router = createRouter({
         {
           path: "orders-page",
           name: "orders-page",
-          component: OrderPage,
+          component: () => import("@/views/user/content/order/OrderPage.vue"),
           meta: {
             isShow: false,
             title: "Đơn hàng của tôi",
@@ -167,7 +141,7 @@ const router = createRouter({
         {
           path: "order-history",
           name: "order-history",
-          component:OrderHistoryPage,
+          component: () => import("@/views/user/content/order/OrderHistoryPage.vue"),
           meta: {
             isShow: false,
             title: "Lịch sử đơn hàng",
@@ -178,7 +152,7 @@ const router = createRouter({
         {
           path: "review/:orderId",
           name: "review",
-          component: ReviewPage,
+          component: () => import("@/views/user/content/ReviewPage.vue"),
           meta: {
             isShow: false,
             title: "Đánh giá sản phẩm",
@@ -189,31 +163,30 @@ const router = createRouter({
         {
           path: "payment/return",
           name: "payment-return",
-          component:PaymentReturnPage,
+          component: () => import("@/views/user/content/payment/PaymentReturnPage.vue"),
           meta: {
             isShow: false,
             title: "Kết quả thanh toán",
             requiresAuth: false, // Không yêu cầu auth vì MoMo redirect về đây
             requiresUser: false,
           },
-      
         },
       ],
     },
     {
       path: "/login",
       name: "login",
-      component: LoginView,
+      component: () => import("@/views/auth/LoginView.vue"),
     },
     {
       path: "/auth/google/callback",
       name: "google-callback",
-      component: GoogleCallbackView,
+      component: () => import("@/views/auth/GoogleCallbackView.vue"),
     },
     {
       path: "/dashboard",
       name: "dashboard",
-      component: AdminLayout,
+      component: () => import("@/layouts/admin/AdminLayout.vue"),
       redirect: "/dashboard/homeview",
       meta: {
         requiresAuth: true,
@@ -223,7 +196,7 @@ const router = createRouter({
         {
           path: "homeview",
           name: "homeview",
-          component: HomeView,
+          component: () => import("@/views/admin/content/HomeView.vue"),
           meta: {
             icon: Home,
             isShow: true,
@@ -235,7 +208,7 @@ const router = createRouter({
         {
           path: "personal",
           name: "personal",
-          component: UserInfoPage,
+          component: () => import("@/views/components/UserInfoPage.vue"),
           meta: {
             isShow: false,
             requiresAuth: true,
@@ -245,7 +218,7 @@ const router = createRouter({
         {
           path: "products",
           name: "products",
-          component: ProductView,
+          component: () => import("@/views/admin/content/ProductView.vue"),
           meta: {
             icon: Package,
             isShow: true,
@@ -257,7 +230,7 @@ const router = createRouter({
         {
           path: "users",
           name: "users",
-          component: UserView,
+          component: () => import("@/views/admin/content/UserView.vue"),
           meta: {
             icon: Users,
             isShow: true,
@@ -269,7 +242,7 @@ const router = createRouter({
         {
           path: "categories",
           name: "categories",
-          component: CategoryView,
+          component: () => import("@/views/admin/content/CategoryView.vue"),
           meta: {
             icon: Folder,
             isShow: true,
@@ -281,7 +254,7 @@ const router = createRouter({
         {
           path: "discounts",
           name: "discounts",
-          component: DiscountView,
+          component: () => import("@/views/admin/content/DiscountView.vue"),
           meta: {
             icon: Percent,
             isShow: true,
@@ -293,7 +266,7 @@ const router = createRouter({
         {
           path: "orders",
           name: "orders",
-          component: OrderView,
+          component: () => import("@/views/admin/content/OrderView.vue"),
           meta: {
             icon: ShoppingCart,
             isShow: true,
@@ -305,7 +278,7 @@ const router = createRouter({
         {
           path: "reviews",
           name: "reviews",
-          component: ReviewView,
+          component: () => import("@/views/admin/content/ReviewView.vue"),
           meta: {
             icon: Star,
             isShow: true,
@@ -320,17 +293,17 @@ const router = createRouter({
     {
       path: "/register",
       name: "register",
-      component: RegisterView,
+      component: () => import("@/views/auth/RegisterView.vue"),
     },
     {
       path: "/verify-otp",
       name: "verify-otp",
-      component: VerifyOtpView,
+      component: () => import("@/views/auth/VerifyOtpView.vue"),
     },
     {
       path: "/forgot-password",
       name: "forgot-password",
-      component: ForgotPassView,
+      component: () => import("@/views/auth/ForgotPassView.vue"),
     },
   ],
 })
@@ -339,45 +312,45 @@ export default router
 
 router.beforeEach(async (to) => {
   document.title = to.meta?.title || to.name || "Plant Shop"
-  
+
   const authStore = useAuthStore()
-  
+
   // Chặn truy cập /login và /register nếu đã đăng nhập
-  if (authStore.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+  if (authStore.isAuthenticated && (to.path === "/login" || to.path === "/register")) {
     const role = authStore.userRole
-    if (role === 'ADMIN') {
-      return '/dashboard'
+    if (role === "ADMIN") {
+      return "/dashboard"
     } else {
-      return '/'
+      return "/"
     }
   }
 
   // Check nếu route yêu cầu authentication
   if (to.meta?.requiresAuth) {
     if (!authStore.isAuthenticated) {
-      return '/login'
+      return "/login"
     }
 
     // Check nếu route yêu cầu quyền ADMIN
     if (to.meta?.requiresAdmin) {
       const role = authStore.userRole
-      if (role !== 'ADMIN') {
-        alert('Bạn không có quyền truy cập trang này!')
-        return '/'
+      if (role !== "ADMIN") {
+        alert("Bạn không có quyền truy cập trang này!")
+        return "/"
       }
     }
 
     // Check nếu route yêu cầu quyền USER
     if (to.meta?.requiresUser) {
       const role = authStore.userRole
-      if (role !== 'USER') {
+      if (role !== "USER") {
         // Nếu là ADMIN thì redirect về dashboard
-        if (role === 'ADMIN') {
-          return '/dashboard'
+        if (role === "ADMIN") {
+          return "/dashboard"
         }
         // Không có quyền thì về login
-        alert('Bạn không có quyền truy cập trang này!')
-        return '/login'
+        alert("Bạn không có quyền truy cập trang này!")
+        return "/login"
       }
     }
   }

@@ -1,38 +1,18 @@
-import "./assets/main.css"
-
-import { createApp } from "vue"
-import { createPinia } from "pinia"
 import axios from "axios"
 
-import App from "./App.vue"
-import router from "./router"
-
-// Axios interceptor để tự động thêm token
-axios.interceptors.request.use(
-  (config) => {
-    // KHÔNG thêm token nếu đây là refresh API call (được đánh dấu bởi _skipRetry)
-    // hoặc là public endpoint không cần auth (được đánh dấu bởi _skipAuth)
-    if (config._skipRetry || config._skipAuth) {
-      return config
-    }
-
-    const token = localStorage.getItem("accessToken")
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
+// Tạo axios instance với cấu hình mặc định
+const apiClient = axios.create({
+  baseURL: "http://localhost:1234/api",
+  headers: {
+    "Content-Type": "application/json",
   },
-  (error) => Promise.reject(error)
-)
+  timeout: 30000,
+})
 
-// Token sẽ được lưu trong localStorage và vẫn còn khi đóng tab
-// Chỉ logout khi user bấm logout button hoặc token hết hạn
-
-// Axios interceptor để tự động refresh token khi 401
+// Biến để quản lý refresh token
 let isRefreshing = false
-let failedQueue = [] //hàng đợi các request bị lỗi khi token hết hạn
+let failedQueue = []
 
-//hàm xử lý hàng đợi các request bị lỗi khi token hết hạn
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -44,11 +24,24 @@ const processQueue = (error, token = null) => {
   failedQueue = []
 }
 
-//hàm xử lý khi token hết hạn và tự động refresh token
-axios.interceptors.response.use(
-  (response) => {
-    return response
+// Interceptor xử lý request - tự động thêm token
+apiClient.interceptors.request.use(
+  (config) => {
+    if (config._skipRetry || config._skipAuth) {
+      return config
+    }
+    const token = localStorage.getItem("accessToken")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
   },
+  (error) => Promise.reject(error)
+)
+
+// Interceptor xử lý response với refresh token logic
+apiClient.interceptors.response.use(
+  (response) => response,
   async (error) => {
     const originalRequest = error.config
 
@@ -57,7 +50,7 @@ axios.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // Bỏ qua retry cho các endpoint public (không cần auth)
+    // Bỏ qua retry cho các endpoint public
     if (originalRequest._skipAuth) {
       return Promise.reject(error)
     }
@@ -72,7 +65,7 @@ axios.interceptors.response.use(
         })
           .then((token) => {
             originalRequest.headers.Authorization = `Bearer ${token}`
-            return axios(originalRequest)
+            return apiClient(originalRequest)
           })
           .catch((err) => Promise.reject(err))
       }
@@ -84,12 +77,11 @@ axios.interceptors.response.use(
         const refreshToken = localStorage.getItem("refreshToken")
         if (!refreshToken) throw new Error("No refresh token")
 
-        // Tạo config riêng cho refresh API để tránh infinite loop
         const refreshConfig = {
           headers: { Authorization: `Bearer ${refreshToken}` },
+          _skipRetry: true,
         }
-        refreshConfig._skipRetry = true
-        const response = await axios.post("/api/auth/refresh", null, refreshConfig)
+        const response = await apiClient.post("/auth/refresh", null, refreshConfig)
 
         if (response.data.success) {
           const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data
@@ -98,29 +90,28 @@ axios.interceptors.response.use(
 
           // Update auth store nếu có
           try {
-            const { useAuthStore } = await import("./stores/auth")
+            const { useAuthStore } = await import("../stores/auth")
             const authStore = useAuthStore()
             authStore.accessToken = newAccessToken
             authStore.refreshToken = newRefreshToken
 
-            // Reload user info sau khi refresh token thành công
+            // Reload user info
             try {
-              const { useUserStore } = await import("./stores/user")
+              const { useUserStore } = await import("../stores/user")
               const userStore = useUserStore()
-              // Chỉ reload nếu user đã đăng nhập và có userId
               if (authStore.isAuthenticated && authStore.userId) {
                 await userStore.getInfo()
               }
             } catch (userErr) {
-              console.error("Error reloading user info after token refresh:", userErr)
+              console.error("Error reloading user info:", userErr)
             }
           } catch (err) {
-            console.error(err)
+            console.error("Error updating auth store:", err)
           }
 
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
           processQueue(null, newAccessToken)
-          return axios(originalRequest)
+          return apiClient(originalRequest)
         } else {
           throw new Error("Refresh token failed")
         }
@@ -128,7 +119,10 @@ axios.interceptors.response.use(
         processQueue(err, null)
         localStorage.removeItem("accessToken")
         localStorage.removeItem("refreshToken")
-        window.location.href = "/login"
+        const currentPath = window.location.pathname
+        if (currentPath !== "/login" && currentPath !== "/register") {
+          window.location.href = "/login"
+        }
         return Promise.reject(err)
       } finally {
         isRefreshing = false
@@ -139,9 +133,13 @@ axios.interceptors.response.use(
   }
 )
 
-const app = createApp(App)
+// Helper methods để sử dụng chung
+export const api = {
+  get: (url, config = {}) => apiClient.get(url, config),
+  post: (url, data = null, config = {}) => apiClient.post(url, data, config),
+  put: (url, data = null, config = {}) => apiClient.put(url, data, config),
+  delete: (url, config = {}) => apiClient.delete(url, config),
+  patch: (url, data = null, config = {}) => apiClient.patch(url, data, config),
+}
 
-app.use(createPinia())
-app.use(router)
-
-app.mount("#app")
+export default apiClient

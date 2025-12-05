@@ -1,6 +1,11 @@
-import { deleteUsers } from "@/api/user/deleted"
-import { getAllUser, getAllUserDeleted, getInfoUser } from "@/api/user/get"
-import { updateInfoUser, restoreUser } from "@/api/user/put"
+import {
+  deleteUsers,
+  getAllUser,
+  getAllUserDeleted,
+  getInfoUser,
+  updateInfoUser,
+  restoreUser,
+} from "@/api/user/user"
 import { defineStore } from "pinia"
 import { ref } from "vue"
 
@@ -10,21 +15,22 @@ export const useUserStore = defineStore("user", () => {
   const allUsers = ref(null)
   const allDeleted = ref(null)
 
-  const getAllUsers = async (token) => {
+  const getAllUsers = async () => {
     try {
-      const response = await getAllUser(token)
+      const response = await getAllUser()
       if (response.data.success) {
         allUsers.value = response.data.data
       }
     } catch (error) {
-     console.error(error)
-     throw error
+      console.error(error)
+      throw error
     }
   }
-  const getAllDeleted = async(token) =>{
+
+  const getAllDeleted = async () => {
     try {
-      const response = await getAllUserDeleted(token)
-      if(response.data.success){
+      const response = await getAllUserDeleted()
+      if (response.data.success) {
         allDeleted.value = response.data.data
       }
     } catch (error) {
@@ -33,9 +39,9 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  const getInfo = async (token) => {
+  const getInfo = async () => {
     try {
-      const response = await getInfoUser(token)
+      const response = await getInfoUser()
       if (response.data.success) {
         userInfo.value = response.data.data
       }
@@ -45,11 +51,11 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  const updateInfoUsers = async (token, userId, userData) => {
+  const updateInfoUsers = async (userId, userData) => {
     try {
-      const response = await updateInfoUser(token, userId, userData)
+      const response = await updateInfoUser(userId, userData)
       if (response.data.success) {
-        userInfo.value = { ...userInfo.value}
+        userInfo.value = { ...userInfo.value }
       }
       return response
     } catch (error) {
@@ -58,19 +64,9 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-   const deleteUser = async (userId, token) => {
-          try {
-              const response = await deleteUsers(userId, token)
-              return response
-          } catch (error) {
-              console.error(error)
-              throw error
-          }
-      }
-
-  const restoreUserStore = async (userId, token) => {
+  const deleteUser = async (userId) => {
     try {
-      const response = await restoreUser(token, userId)
+      const response = await deleteUsers(userId)
       return response
     } catch (error) {
       console.error(error)
@@ -78,5 +74,26 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  return { allUsers, allDeleted ,updateInfo, userInfo,deleteUser, restoreUserStore, getAllUsers, getAllDeleted, getInfo, updateInfoUsers }
+  const restoreUserStore = async (userId) => {
+    try {
+      const response = await restoreUser(userId)
+      return response
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  return {
+    allUsers,
+    allDeleted,
+    updateInfo,
+    userInfo,
+    deleteUser,
+    restoreUserStore,
+    getAllUsers,
+    getAllDeleted,
+    getInfo,
+    updateInfoUsers,
+  }
 })

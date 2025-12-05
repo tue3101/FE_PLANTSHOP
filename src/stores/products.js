@@ -7,10 +7,15 @@ import {
   getProductById,
   getAllProductDeleted,
   getAllCategoryDeleted,
-} from "../api/products/get"
-import { addProductsAPI, addCategories as addCategoriesAPI } from "../api/products/post"
-import { deleteProducts, deleteCategories } from "@/api/products/deleted"
-import { restorCategory, restorProduct, updateProduct, updateCategory } from "@/api/products/put"
+  addProductsAPI,
+  addCategories as addCategoriesAPI,
+  deleteProducts,
+  deleteCategories,
+  restoreCategory as restorCategory,
+  restoreProduct as restorProduct,
+  updateProduct,
+  updateCategory,
+} from "@/api/products/products"
 
 export const useProductStore = defineStore("product", () => {
   const products = ref([])
@@ -32,14 +37,14 @@ export const useProductStore = defineStore("product", () => {
       throw error
     }
   }
-  const getAllProductsDeleted = async (token) => {
+  const getAllProductsDeleted = async () => {
     try {
-      const response = await getAllProductDeleted(token)
+      const response = await getAllProductDeleted()
       if (response.data.success) {
         allProductDeleted.value = response.data.data
       }
     } catch (error) {
-      console.error('Error fetching deleted products:', error)
+      console.error("Error fetching deleted products:", error)
       if (error.response?.status === 400 || error.response?.status === 401) {
         allProductDeleted.value = []
         return
@@ -69,9 +74,9 @@ export const useProductStore = defineStore("product", () => {
       console.error(error)
     }
   }
-  const addProducts = async (token, productData) => {
+  const addProducts = async (productData) => {
     try {
-      const response = await addProductsAPI(token, productData)
+      const response = await addProductsAPI(productData)
       if (response.data.success) {
         products.value = { ...products.value }
       }
@@ -80,9 +85,9 @@ export const useProductStore = defineStore("product", () => {
       throw error
     }
   }
-  const deleteProduct = async (productId, token) => {
+  const deleteProduct = async (productId) => {
     try {
-      const response = await deleteProducts(productId, token)
+      const response = await deleteProducts(productId)
       return response
     } catch (error) {
       console.error(error)
@@ -90,18 +95,18 @@ export const useProductStore = defineStore("product", () => {
     }
   }
 
-  const restoreProductStore = async (productId, token) => {
+  const restoreProductStore = async (productId) => {
     try {
-      const response = await restorProduct(token, productId)
+      const response = await restorProduct(productId)
       return response
     } catch (error) {
       console.error(error)
       throw error
     }
   }
-  const updateProductStore = async (token, productId, productData) => {
+  const updateProductStore = async (productId, productData) => {
     try {
-      const response = await updateProduct(token, productId, productData)
+      const response = await updateProduct(productId, productData)
       if (response.data.success) {
         products.value = { ...products.value }
       }
@@ -125,14 +130,14 @@ export const useProductStore = defineStore("product", () => {
     }
   }
 
-  const getAllCategoriesDeleted = async (token) => {
+  const getAllCategoriesDeleted = async () => {
     try {
-      const response = await getAllCategoryDeleted(token)
+      const response = await getAllCategoryDeleted()
       if (response.data.success) {
         allCategoryDeleted.value = response.data.data
       }
     } catch (error) {
-      console.error('Error fetching deleted categories:', error)
+      console.error("Error fetching deleted categories:", error)
       // Nếu lỗi 400 hoặc không có quyền, set mảng rỗng thay vì throw
       if (error.response?.status === 400 || error.response?.status === 401) {
         allCategoryDeleted.value = []
@@ -141,9 +146,9 @@ export const useProductStore = defineStore("product", () => {
       throw error
     }
   }
-  const addCategories = async (token, categoryData) => {
+  const addCategories = async (categoryData) => {
     try {
-      const response = await addCategoriesAPI(token, categoryData)
+      const response = await addCategoriesAPI(categoryData)
       if (response.data.success) {
         categories.value = { ...categories.value }
       }
@@ -153,9 +158,9 @@ export const useProductStore = defineStore("product", () => {
     }
   }
 
-  const deleteCategory = async (categoryId, token) => {
+  const deleteCategory = async (categoryId) => {
     try {
-      const response = await deleteCategories(categoryId, token)
+      const response = await deleteCategories(categoryId)
       return response
     } catch (error) {
       console.error(error)
@@ -163,9 +168,9 @@ export const useProductStore = defineStore("product", () => {
     }
   }
 
-  const restoreCategoryStore = async (categoryId, token) => {
+  const restoreCategoryStore = async (categoryId) => {
     try {
-      const response = await restorCategory(token, categoryId)
+      const response = await restorCategory(categoryId)
       return response
     } catch (error) {
       console.error(error)
@@ -173,11 +178,9 @@ export const useProductStore = defineStore("product", () => {
     }
   }
 
-  
-
-  const updateCategoryStore = async (token, categoryId, categoryData) => {
+  const updateCategoryStore = async (categoryId, categoryData) => {
     try {
-      const response = await updateCategory(token, categoryId, categoryData)
+      const response = await updateCategory(categoryId, categoryData)
       if (response.data.success) {
         categories.value = { ...categories.value }
       }

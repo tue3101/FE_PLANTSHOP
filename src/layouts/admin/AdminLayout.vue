@@ -9,5 +9,4 @@ import NavbarComponent from "@/components/common/admin/NavbarComponent.vue"
       <router-view />
     </div>
   </div>
-
 </template>
