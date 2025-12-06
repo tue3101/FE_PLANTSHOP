@@ -1,18 +1,8 @@
 <template>
   <div class="p-8">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex justify-center items-center py-12">
-      <div class="text-center">
-        <div
-          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
-        ></div>
-        <p class="mt-4 text-gray-600">Đang tải dữ liệu...</p>
-      </div>
-    </div>
-
     <!-- Error State -->
     <div
-      v-else-if="errorMessage"
+      v-if="errorMessage"
       class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
     >
       <div class="flex items-center justify-between">
@@ -37,58 +27,77 @@
     </div>
 
     <!-- Data Display -->
-    <div v-else class="flex-1 items-center justify-between mb-4">
+    <div class="flex-1 items-center justify-between mb-4">
       <h1 class="text-3xl font-bold mb-6 text-center">THỐNG KÊ</h1>
 
       <!-- Filter Section -->
       <div class="mb-6 flex justify-center gap-4 items-center flex-wrap">
         <div class="flex items-center gap-2">
-          <label for="viewType" class="text-sm font-medium text-gray-700">Xem theo:</label>
-          <select
-            id="viewType"
-            v-model="viewType"
-            @change="onViewTypeChange"
-            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="month">Theo Tháng</option>
-            <option value="year">Theo Năm</option>
-          </select>
+          <Label for="viewType">Xem theo:</Label>
+          <Select id="viewType" v-model="viewType" @update:model-value="onViewTypeChange">
+            <SelectTrigger class="w-[180px]">
+              <SelectValue placeholder="Chọn loại xem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Theo Tháng</SelectItem>
+              <SelectItem value="year">Theo Năm</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div v-if="viewType === 'month'" class="flex items-center gap-2">
-          <label for="monthPicker" class="text-sm font-medium text-gray-700">Chọn tháng:</label>
-          <input
-            id="monthPicker"
-            type="month"
-            v-model="selectedMonthYear"
-            @change="onMonthYearChange"
-            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <Label for="monthPicker">Chọn tháng:</Label>
+          <Popover
+            v-model:open="isPopoverOpen"
+            :key="`popover-month-${selectedYear}-${selectedMonth}`"
+          >
+            <PopoverTrigger as-child>
+              <Button
+                id="monthPicker"
+                variant="outline"
+                class="w-[180px] justify-start text-left font-normal"
+                :disabled="isLoading"
+              >
+                <CalendarIcon class="mr-2 h-4 w-4" />
+                <span>{{ monthYearDisplay }}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              class="w-auto p-0"
+              align="start"
+              @pointer-down-outside="isPopoverOpen = false"
+            >
+              <Calendar
+                v-model="calendarDate"
+                :layout="'month-and-year'"
+                @update:model-value="handleCalendarDateChange"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
-        <div v-else class="flex items-center gap-2">
-          <label for="yearPicker" class="text-sm font-medium text-gray-700">Chọn năm:</label>
-          <input
+        <div v-if="viewType === 'year'" class="flex items-center gap-2">
+          <Label for="yearPicker">Chọn năm:</Label>
+          <Select
             id="yearPicker"
-            type="number"
-            v-model.number="selectedYear"
-            @change="loadStatistics"
-            :min="availableYears[0]"
-            :max="availableYears[availableYears.length - 1]"
-            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-24"
-            placeholder="Năm"
-          />
+            v-model="selectedYearString"
+            @update:model-value="handleYearChange"
+          >
+            <SelectTrigger class="w-24">
+              <SelectValue placeholder="Năm" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="year in availableYears" :key="year" :value="String(year)">
+                {{ year }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <button
-          @click="loadStatistics"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Tải Lại
-        </button>
+        <Button @click="loadStatistics"> Tải Lại </Button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
         <!-- Tổng Người Dùng -->
         <div
-          class="relative p-6 rounded-xl shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+          class="relative p-6 rounded-xl shadow-lg bg-blue-50 border-l-4 border-blue-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
         >
           <div
             class="absolute top-0 right-0 w-20 h-20 bg-blue-200 rounded-full -mr-10 -mt-10 opacity-20"
@@ -96,42 +105,54 @@
           <div class="relative">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-semibold text-blue-800">Tổng Người Dùng</h2>
-              <div class="p-3 bg-blue-500 rounded-lg shadow-md">
+              <div class="p-3 bg-blue-500/50 rounded-lg shadow-md">
                 <Users class="w-6 h-6 text-white" />
               </div>
             </div>
-            <p class="text-3xl font-bold text-blue-700">{{ formatNumber(totalUsers) }}</p>
+            <p v-if="!isLoadingUsers" class="text-3xl font-bold text-blue-700">
+              {{ formatNumber(totalUsers) }}
+            </p>
+            <div v-else class="flex items-center gap-2">
+              <Loader class="w-6 h-6 animate-spin text-blue-700" />
+              <span class="text-sm text-gray-500">Đang tải...</span>
+            </div>
           </div>
         </div>
 
         <!-- Tổng Sản Phẩm Bán Được -->
         <div
-          class="relative p-6 rounded-xl shadow-lg bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+          class="relative p-6 rounded-xl shadow-lg bg-primary/10 border-l-4 border-primary hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
         >
           <div
-            class="absolute top-0 right-0 w-20 h-20 bg-green-200 rounded-full -mr-10 -mt-10 opacity-20"
+            class="absolute top-0 right-0 w-20 h-20 bg-primary/50 rounded-full -mr-10 -mt-10 opacity-20"
           ></div>
           <div class="relative">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h2 class="text-lg font-semibold text-green-800">
+                <h2 class="text-lg font-semibold text-primary">
                   {{ viewType === "year" ? `Tổng Sản Phẩm Bán Năm` : `Tổng Sản Phẩm Bán Tháng` }}
                 </h2>
-                <p class="text-sm text-green-600 mt-1">
+                <p class="text-sm text-primary mt-1">
                   {{ viewType === "year" ? selectedYear : `${selectedMonth}/${selectedYear}` }}
                 </p>
               </div>
-              <div class="p-3 bg-green-500 rounded-lg shadow-md">
+              <div class="p-3 bg-primary rounded-lg shadow-md">
                 <Package class="w-6 h-6 text-white" />
               </div>
             </div>
-            <p class="text-3xl font-bold text-green-700">{{ formatNumber(totalProductsSold) }}</p>
+            <p v-if="!loadingProductsSold" class="text-3xl font-bold text-green-700">
+              {{ formatNumber(totalProductsSold) }}
+            </p>
+            <div v-else class="flex items-center gap-2">
+              <Loader class="w-6 h-6 animate-spin text-green-700" />
+              <span class="text-sm text-gray-500">Đang tải...</span>
+            </div>
           </div>
         </div>
 
         <!-- Tổng Doanh Thu -->
         <div
-          class="relative p-6 rounded-xl shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-purple-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+          class="relative p-6 rounded-xl shadow-lg bg-purple-50 border-l-4 border-purple-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
         >
           <div
             class="absolute top-0 right-0 w-20 h-20 bg-purple-200 rounded-full -mr-10 -mt-10 opacity-20"
@@ -152,15 +173,19 @@
                 <DollarSign class="w-6 h-6 text-white" />
               </div>
             </div>
-            <p class="text-3xl font-bold text-purple-700">
+            <p v-if="!isLoading" class="text-3xl font-bold text-purple-700">
               {{ formatCurrency(statistics?.totalRevenue || 0) }}
             </p>
+            <div v-else class="flex items-center gap-2">
+              <Loader class="w-6 h-6 animate-spin text-purple-700" />
+              <span class="text-sm text-gray-500">Đang tải...</span>
+            </div>
           </div>
         </div>
 
         <!-- Tổng Đơn Hàng -->
         <div
-          class="relative p-6 rounded-xl shadow-lg bg-gradient-to-br from-red-50 to-red-100 border-l-4 border-red-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+          class="relative p-6 rounded-xl shadow-lg bg-red-50 border-l-4 border-red-500 hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
         >
           <div
             class="absolute top-0 right-0 w-20 h-20 bg-red-200 rounded-full -mr-10 -mt-10 opacity-20"
@@ -181,9 +206,13 @@
                 <ShoppingCart class="w-6 h-6 text-white" />
               </div>
             </div>
-            <p class="text-3xl font-bold text-red-700">
+            <p v-if="!isLoading" class="text-3xl font-bold text-red-700">
               {{ formatNumber(statistics?.totalOrders || 0) }}
             </p>
+            <div v-else class="flex items-center gap-2">
+              <Loader class="w-6 h-6 animate-spin text-red-700" />
+              <span class="text-sm text-gray-500">Đang tải...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -197,21 +226,19 @@
                   : `Sơ Đồ Doanh Thu Theo Tháng (${selectedMonth}/${selectedYear})`
               }}
             </h3>
-            <div class="h-[500px] w-[1100px]">
-              <Bar v-if="barData" :data="barData" :options="barOptions" />
-            </div>
-          </div>
-          <!-- <div class="mt-10">
-            <h3 class="text-lg font-medium mb-2 ">TOP 10 Sản Phẩm Bán Chạy</h3>
-            <div class="h-[500px] w-[600px]  mx-auto">
-              <Pie v-if="pieData"
-                :key="`pie-${topProducts.length}-${selectedYear}-${selectedMonth}-${selectedDay}-${viewType}`"
-                :data="pieData" :options="pieOptions" />
-              <div v-else class="flex items-center justify-center h-full text-gray-500">
-                Đang tải dữ liệu...
+            <div class="h-[500px] w-[1100px] relative">
+              <Bar v-if="barData && !isLoadingChart" :data="barData" :options="barOptions" />
+              <div
+                v-else
+                class="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg"
+              >
+                <div class="text-center">
+                  <Loader class="w-8 h-8 animate-spin text-gray-600 mx-auto" />
+                  <p class="mt-2 text-gray-600">Đang tải biểu đồ...</p>
+                </div>
               </div>
             </div>
-          </div> -->
+          </div>
         </div>
       </div>
     </div>
@@ -219,7 +246,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon } from "lucide-vue-next"
+import moment from "moment"
+import { parseDate } from "@internationalized/date"
+import { CalendarDate } from "@internationalized/date"
 import { storeToRefs } from "pinia"
 import {
   Chart as ChartJS,
@@ -234,6 +267,26 @@ import {
   PointElement,
 } from "chart.js"
 import { Bar } from "vue-chartjs"
+import { useAsyncOperation } from "@/composables/useAsyncOperation"
+import {
+  getStatisticsByDate,
+  getStatisticsByMonth,
+  getStatisticsByYear,
+} from "@/api/statistics/statistics"
+import { getAllUser } from "@/api/user/user"
+import { getAllProducts } from "@/api/products/products"
+import { useStatisticsStore } from "@/stores/statistics"
+import { Users, Package, DollarSign, ShoppingCart, Loader } from "lucide-vue-next"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 ChartJS.register(
   Title,
   Tooltip,
@@ -328,26 +381,61 @@ const barRevenuePlugin = {
 
 // Đăng ký plugins
 ChartJS.register(percentagePlugin, barRevenuePlugin)
-import { useAsyncOperation } from "@/composables/useAsyncOperation"
-import {
-  getStatisticsByDate,
-  getStatisticsByMonth,
-  getStatisticsByYear,
-} from "@/api/statistics/statistics"
-import { getAllUser } from "@/api/user/user"
-import { getAllProducts } from "@/api/products/products"
-import { useStatisticsStore } from "@/stores/statistics"
-import { Users, Package, DollarSign, ShoppingCart } from "lucide-vue-next"
 
 const { isLoading, errorMessage, resetError, executeAsync } = useAsyncOperation()
 const statisticsStore = useStatisticsStore()
-const { totalProductsSoldByMonth, totalProductsSoldByYear } = storeToRefs(statisticsStore)
+const { totalProductsSoldByMonth, totalProductsSoldByYear, loadingProductsSold } =
+  storeToRefs(statisticsStore)
+
+// Separate loading states
+const isLoadingUsers = ref(false)
+const isLoadingChart = ref(false)
 
 // Filter state
 const viewType = ref("month") // 'day', 'month' or 'year'
 const selectedYear = ref(new Date().getFullYear())
 const selectedMonth = ref(new Date().getMonth() + 1)
 // const selectedDay = ref(new Date().getDate())
+
+// Helper function to create DateValue from year and month using parseDate
+const createDateValue = (year, month) => {
+  // Format: YYYY-MM-DD
+  const dateString = `${year}-${String(month).padStart(2, "0")}-01`
+  return parseDate(dateString)
+}
+
+// Calendar date for month picker
+const calendarDate = ref(createDateValue(selectedYear.value, selectedMonth.value))
+
+// Computed for month-year display
+const monthYearDisplay = computed(() => {
+  return `Tháng ${selectedMonth.value}/${selectedYear.value}`
+})
+
+// Computed for year select (string)
+const selectedYearString = computed({
+  get: () => String(selectedYear.value),
+  set: (value) => {
+    selectedYear.value = parseInt(value)
+  },
+})
+
+// Handle calendar date change
+const handleCalendarDateChange = (date) => {
+  if (date) {
+    selectedYear.value = date.year
+    selectedMonth.value = date.month
+    // Close popover after selection
+    isPopoverOpen.value = false
+    onMonthYearChange()
+  }
+}
+
+// Handle year change from select
+const handleYearChange = (value) => {
+  selectedYear.value = parseInt(value)
+  loadStatistics()
+}
 
 // Computed property for date picker (format: YYYY-MM-DD)
 // const selectedDate = computed({
@@ -475,13 +563,40 @@ const formatCurrency = (amount) => {
 //   }
 // }
 
+// Popover open state
+const isPopoverOpen = ref(false)
+
 // Handle view type change
 const onViewTypeChange = () => {
+  // Close popover if open before changing view type
+  if (isPopoverOpen.value) {
+    isPopoverOpen.value = false
+    // Wait for popover to close before changing view
+    setTimeout(() => {
+      changeViewType()
+    }, 200)
+  } else {
+    changeViewType()
+  }
+}
+
+const changeViewType = () => {
   // Reset store values khi thay đổi viewType
   statisticsStore.totalProductsSoldByMonth = 0
   statisticsStore.totalProductsSoldByYear = 0
+  // Update calendar date when switching to month view
+  if (viewType.value === "month") {
+    calendarDate.value = createDateValue(selectedYear.value, selectedMonth.value)
+  }
   loadStatistics()
 }
+
+// Watch selectedMonth and selectedYear to update calendarDate
+watch([selectedMonth, selectedYear], () => {
+  if (viewType.value === "month") {
+    calendarDate.value = createDateValue(selectedYear.value, selectedMonth.value)
+  }
+})
 
 // Load daily data for bar chart when viewing by month
 const dailyRevenueData = ref([])
@@ -499,11 +614,11 @@ const loadDailyDataForMonth = async () => {
     promises.push(
       getStatisticsByDate(year, month, day)
         .then((response) => {
-          if (response.data?.success && response.data?.data) {
+          if (response.success && response.data) {
             return {
               day,
-              revenue: response.data.data.totalRevenue || 0,
-              orders: response.data.data.totalOrders || 0,
+              revenue: response.data.totalRevenue || 0,
+              orders: response.data.totalOrders || 0,
             }
           }
           return { day, revenue: 0, orders: 0 }
@@ -523,8 +638,8 @@ const loadStatistics = async () => {
       if (viewType.value === "month") {
         // Load statistics by month
         const statsResponse = await getStatisticsByMonth(selectedYear.value, selectedMonth.value)
-        if (statsResponse.data?.success && statsResponse.data?.data) {
-          statistics.value = statsResponse.data.data
+        if (statsResponse.success && statsResponse.data) {
+          statistics.value = statsResponse.data
         }
 
         // Load total products sold by month
@@ -544,8 +659,8 @@ const loadStatistics = async () => {
       } else {
         // Load statistics by year
         const statsResponse = await getStatisticsByYear(selectedYear.value)
-        if (statsResponse.data?.success && statsResponse.data?.data) {
-          statistics.value = statsResponse.data.data
+        if (statsResponse.success && statsResponse.data) {
+          statistics.value = statsResponse.data
         }
 
         // Load total products sold by year
@@ -573,11 +688,11 @@ const loadMonthlyDataForYear = async () => {
     promises.push(
       getStatisticsByMonth(selectedYear.value, month)
         .then((response) => {
-          if (response.data?.success && response.data?.data) {
+          if (response.success && response.data) {
             return {
               month,
-              revenue: response.data.data.totalRevenue || 0,
-              orders: response.data.data.totalOrders || 0,
+              revenue: response.data.totalRevenue || 0,
+              orders: response.data.totalOrders || 0,
             }
           }
           return { month, revenue: 0, orders: 0 }
@@ -790,8 +905,8 @@ const barOptions = computed(() => ({
 const loadTotalUsers = async () => {
   try {
     const response = await getAllUser()
-    if (response.data?.success && Array.isArray(response.data.data)) {
-      totalUsers.value = response.data.data.length
+    if (response.success && Array.isArray(response.data)) {
+      totalUsers.value = response.data.length
     } else {
       totalUsers.value = 0
     }
@@ -805,8 +920,8 @@ const loadTotalUsers = async () => {
 const loadTotalProducts = async () => {
   try {
     const response = await getAllProducts()
-    if (response.data?.success && Array.isArray(response.data.data)) {
-      totalProducts.value = response.data.data.length
+    if (response.success && Array.isArray(response.data)) {
+      totalProducts.value = response.data.length
     } else {
       totalProducts.value = 0
     }

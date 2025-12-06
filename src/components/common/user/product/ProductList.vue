@@ -52,7 +52,7 @@
       </div>
 
       <!-- Product Info -->
-      <div class="p-4 flex flex-col flex-grow">
+      <div class="p-4 flex flex-col grow">
         <h3 class="font-semibold text-lg text-gray-800 mb-2 line-clamp-2">
           {{ getProductName(product) }}
         </h3>

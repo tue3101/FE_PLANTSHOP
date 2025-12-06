@@ -92,7 +92,7 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter, useRoute } from "vue-router"
-import { CheckCircle, XCircle } from "lucide-vue-next"
+import { CheckCircle, XCircle, Loader } from "lucide-vue-next"
 import { usePaymentMethodStore } from "@/stores/payment-methods"
 import { usePaymentStore } from "@/stores/payments"
 import { useOrderStore } from "@/stores/orders"

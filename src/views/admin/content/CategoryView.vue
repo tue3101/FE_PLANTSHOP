@@ -104,32 +104,6 @@
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
-    <DeleteModal
-      :showModal="showDeleteSuccessModal"
-      mode="delete-success"
-      @close="handleDeleteSuccessClose"
-    />
-
-    <!-- Add Success Modal -->
-    <DeleteModal
-      :showModal="showAddSuccessModal"
-      mode="add-success"
-      @close="handleAddSuccessClose"
-    />
-
-    <!-- Update Success Modal -->
-    <DeleteModal
-      :showModal="showUpdateSuccessModal"
-      mode="update-success"
-      @close="handleUpdateSuccessClose"
-    />
-
-    <!-- Restore Success Modal -->
-    <DeleteModal
-      :showModal="showRestoreSuccessModal"
-      mode="restore-success"
-      @close="handleRestoreSuccessClose"
-    />
   </div>
 </template>
 
@@ -147,6 +121,7 @@ import { ref, onMounted, computed } from "vue"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
 import { useProductStore } from "@/stores/products"
 import { useAuthStore } from "@/stores/auth"
+import { toastSuccess, toastError } from "@/utils/toast"
 
 //dataPager
 const PAGE_SIZE = 5
@@ -285,12 +260,14 @@ const handleUpdateCategory = async (categoryData) => {
       await refreshCategoriesData()
       closeUpdateModal()
       updateError.value = ""
+      toastSuccess("Cập nhật danh mục thành công!")
       showUpdateSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể cập nhật danh mục!",
       onError: (error) => {
         updateError.value = error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể cập nhật danh mục!")
       },
     }
   )
@@ -347,12 +324,13 @@ async function handleDeleteConfirm() {
       await productStore.deleteCategory(categoryId)
       await refreshCategoriesData()
       showDeleteConfirmModal.value = false
+      toastSuccess("Xóa danh mục thành công!")
       showDeleteSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể xóa danh mục!",
       onError: (error) => {
-        error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể xóa danh mục!")
         showDeleteConfirmModal.value = false
       },
     }
@@ -378,12 +356,14 @@ async function handleRestore(item) {
     async () => {
       await productStore.restoreCategoryStore(categoryId)
       await refreshCategoriesData()
+      toastSuccess("Khôi phục danh mục thành công!")
       showRestoreSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể khôi phục danh mục!",
       onError: (error) => {
         const errorMessage = error.response?.data?.message
+        toastError(errorMessage || "Không thể khôi phục danh mục!")
         console.error("Restore error:", errorMessage || error)
       },
     }

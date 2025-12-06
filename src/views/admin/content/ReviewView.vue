@@ -121,18 +121,6 @@
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
-    <DeleteModal
-      :showModal="showDeleteSuccessModal"
-      mode="delete-success"
-      @close="handleDeleteSuccessClose"
-    />
-
-    <!-- Restore Success Modal -->
-    <DeleteModal
-      :showModal="showRestoreSuccessModal"
-      mode="restore-success"
-      @close="handleRestoreSuccessClose"
-    />
   </div>
 </template>
 

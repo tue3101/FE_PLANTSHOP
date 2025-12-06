@@ -3,13 +3,13 @@
     <div
       v-if="show"
       data-deposit-modal
-      class="fixed inset-0 z-[9999] flex items-center justify-center"
+      class="fixed inset-0 z-9999 flex items-center justify-center"
       style="position: fixed !important; z-index: 9999 !important"
       @click.self="handleClose"
     >
       <div
         ref="modalRef"
-        class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto relative z-[10000]"
+        class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto relative z-10000"
         :style="{
           transform: `translate(${position.x}px, ${position.y}px)`,
           position: 'relative',
@@ -19,32 +19,16 @@
       >
         <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <!-- Header - có thể kéo modal từ đây -->
-          <div
-            class="flex items-center justify-between mb-4 cursor-move"
-            @mousedown="handleMouseDown"
-          >
+          <div @mousedown="handleMouseDown">
             <h3 class="text-lg font-bold text-gray-900 select-none">Yêu cầu đặt cọc</h3>
-            <button
-              @click="handleClose"
-              class="text-gray-400 hover:text-gray-600 cursor-pointer no-drag"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            </button>
           </div>
 
           <!-- Content -->
           <div class="space-y-4">
             <!-- Thông báo quy định -->
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <Card class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
               <div class="flex">
-                <div class="flex-shrink-0">
+                <div class="shrink-0">
                   <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                     <path
                       fill-rule="evenodd"
@@ -62,7 +46,7 @@
                   </p>
                 </div>
               </div>
-            </div>
+            </Card>
 
             <!-- Thông tin đặt cọc -->
             <div v-if="depositAmount > 0 || depositPayment" class="space-y-3">
@@ -152,7 +136,7 @@
               class="bg-green-50 border-l-4 border-green-400 p-4 rounded"
             >
               <div class="flex">
-                <div class="flex-shrink-0">
+                <div class="shrink-0">
                   <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
                     <path
                       fill-rule="evenodd"
@@ -218,7 +202,6 @@ const emit = defineEmits(["close", "payment", "order-created"])
 const isProcessing = ref(false)
 const orderStore = useOrderStore()
 const authStore = useAuthStore()
-const userStore = useUserStore()
 const cartStore = useCartStore()
 // Drag functionality để di chuyển modal
 const modalRef = ref(null)
@@ -291,11 +274,11 @@ const handlePayment = async () => {
     // Tạo đơn hàng
     const response = await orderStore.createNewOrder(props.orderData)
 
-    if (response.data.success) {
+    if (response.success) {
       // Lấy order data từ response
-      const orderDataFromResponse = response.data.data
+      const orderDataFromResponse = response.data
       const orderId =
-        orderDataFromResponse?.order_id || response.data.order_id || orderDataFromResponse?.id
+        orderDataFromResponse?.order_id || response.order_id || orderDataFromResponse?.id
 
       if (!orderId) {
         throw new Error("Không thể lấy order ID từ response!")

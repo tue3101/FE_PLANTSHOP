@@ -1,83 +1,103 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="flex flex-col gap-2">
-    <input
-      v-model="email"
-      type="email"
-      placeholder="Email"
-      class="border px-3 py-2 rounded"
-      required
-    />
-    <input
-      v-model="password"
-      type="password"
-      placeholder="Mật khẩu"
-      class="border px-3 py-2 rounded"
-      required
-    />
+  <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-2">
+      <Label for="email">Email</Label>
+      <Input
+        id="email"
+        v-model="email"
+        type="email"
+        placeholder="Email"
+        required
+        :disabled="isLoading"
+      />
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <Label for="password">Mật khẩu</Label>
+      <Input
+        id="password"
+        v-model="password"
+        type="password"
+        placeholder="Mật khẩu"
+        required
+        :disabled="isLoading"
+      />
+    </div>
+
     <div>
       <router-link
         to="/forgot-password"
-        class="text-xs mt-2 inline-block hover:text-green-700 hover:cursor-pointer transition-colors"
+        class="text-xs text-primary hover:text-primary/80 hover:underline transition-colors"
       >
         Quên mật khẩu?
       </router-link>
     </div>
-    <button
-      type="submit"
-      :disabled="isLoading"
-      class="bg-green-700 text-white py-2 rounded mt-2 hover:bg-green-600 hover:cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-    >
+
+    <Button type="submit" :disabled="isLoading" class="w-full">
+      <Loader v-if="isLoading" :size="16" class="animate-spin" />
       {{ isLoading ? "ĐANG XỬ LÝ..." : "ĐĂNG NHẬP" }}
-    </button>
-    <div v-if="errorMessage" class="text-red-500 text-sm text-center mt-2">
-      {{ errorMessage }}
-    </div>
+    </Button>
+
+    <Alert v-if="errorMessage" variant="destructive">
+      <AlertDescription class="text-sm text-center">
+        {{ errorMessage }}
+      </AlertDescription>
+    </Alert>
+
     <div class="flex items-center justify-center gap-2 mt-2 w-full">
-      <span class="text-black">HOẶC VỚI</span>
-      <button
-        type="button"
+      <Button
+        variant="dashed"
+        size="icon"
         @click="handleGoogleLogin"
         :disabled="isLoading"
-        class="w-10 h-10 bg-white rounded-full hover:cursor-pointer hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        class="w-full"
       >
-        <img src="/img/google.png" alt="Google" class="w-full h-full rounded-full" />
-      </button>
+        <span class="text-sm text-muted-foreground">HOẶC VỚI</span>
+        <img src="/img/google.png" alt="Google" class="w-5 h-5 rounded-full" />
+      </Button>
     </div>
   </form>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader } from "lucide-vue-next"
 
-// Props từ component cha
-defineProps({
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  errorMessage: {
-    type: String,
-    default: "",
-  },
+interface Props {
+  isLoading?: boolean
+  errorMessage?: string
+}
+
+interface LoginData {
+  email: string
+  password: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
+  errorMessage: "",
 })
 
-// Emit events cho component cha
-const emit = defineEmits(["login", "google-login"])
+const emit = defineEmits<{
+  login: [data: LoginData]
+  "google-login": []
+}>()
 
-// Local state cho form
-const email = ref("")
-const password = ref("")
+const email = ref<string>("")
+const password = ref<string>("")
 
-// Xử lý submit form
-const handleSubmit = () => {
+const handleSubmit = (): void => {
   emit("login", {
     email: email.value,
     password: password.value,
   })
 }
 
-// Xử lý Google login
-const handleGoogleLogin = () => {
+const handleGoogleLogin = (): void => {
   emit("google-login")
 }
 </script>

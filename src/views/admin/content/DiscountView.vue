@@ -113,32 +113,6 @@
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
-    <DeleteModal
-      :showModal="showDeleteSuccessModal"
-      mode="delete-success"
-      @close="handleDeleteSuccessClose"
-    />
-
-    <!-- Add Success Modal -->
-    <DeleteModal
-      :showModal="showAddSuccessModal"
-      mode="add-success"
-      @close="handleAddSuccessClose"
-    />
-
-    <!-- Update Success Modal -->
-    <DeleteModal
-      :showModal="showUpdateSuccessModal"
-      mode="update-success"
-      @close="handleUpdateSuccessClose"
-    />
-
-    <!-- Restore Success Modal -->
-    <DeleteModal
-      :showModal="showRestoreSuccessModal"
-      mode="restore-success"
-      @close="handleRestoreSuccessClose"
-    />
   </div>
 </template>
 
@@ -157,6 +131,7 @@ import { useAuthStore } from "@/stores/auth"
 
 import { ref, onMounted, computed } from "vue"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
+import { toastSuccess, toastError } from "@/utils/toast"
 
 //dataPager
 const PAGE_SIZE = 5
@@ -242,6 +217,7 @@ const handleAddDiscount = async (discountData) => {
       await refreshDiscountsData()
       closeAddModal()
       addError.value = "" // Reset error khi thành công
+      toastSuccess("Thêm mã giảm giá thành công!")
       showAddSuccessModal.value = true
     },
     {
@@ -305,12 +281,14 @@ const handleUpdateDiscount = async (discountData) => {
       await refreshDiscountsData()
       closeUpdateModal()
       updateError.value = ""
+      toastSuccess("Cập nhật mã giảm giá thành công!")
       showUpdateSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể cập nhật mã giảm giá!",
       onError: (error) => {
         updateError.value = error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể cập nhật mã giảm giá!")
       },
     }
   )
@@ -355,13 +333,14 @@ async function handleDeleteConfirm() {
       await discountStore.deleteDiscount(discountId)
       await refreshDiscountsData()
       showDeleteConfirmModal.value = false
+      toastSuccess("Xóa mã giảm giá thành công!")
       showDeleteSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể xóa mã giảm giá!",
       onError: (error) => {
         const errorMessage = error.response?.data?.message
-        alert(errorMessage || "Không thể xóa mã giảm giá!")
+        toastError(errorMessage || "Không thể xóa mã giảm giá!")
         showDeleteConfirmModal.value = false
       },
     }
@@ -392,12 +371,14 @@ async function handleRestore(item) {
     async () => {
       await discountStore.restoreDiscountStore(discountId)
       await refreshDiscountsData()
+      toastSuccess("Khôi phục mã giảm giá thành công!")
       showRestoreSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể khôi phục mã giảm giá!",
       onError: (error) => {
         const errorMessage = error.response?.data?.message
+        toastError(errorMessage || "Không thể khôi phục mã giảm giá!")
         console.error("Restore error:", errorMessage || error)
       },
     }

@@ -62,7 +62,7 @@ const handleUpdate = async (credentials) => {
 
       //update và cập nhật lại sau update
       const response = await userStore.updateInfoUsers(userId, userData)
-      if (response?.data?.success) {
+      if (response?.success) {
         await userStore.getInfo()
         if (userStore.userInfo) {
           formData.value = {

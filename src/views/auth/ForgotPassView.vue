@@ -14,28 +14,28 @@
         <!-- Nhập email và gửi OTP -->
         <div v-if="!otpSent" class="flex flex-col gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
+            <Label for="email">Email</Label>
+            <Input
+              id="email"
               v-model="email"
               type="email"
               placeholder="Nhập email của bạn"
-              class="border px-3 py-2 rounded w-full"
+              class="w-full"
               :disabled="isSendingOtp"
               required
+              autofocus
             />
           </div>
 
-          <button
-            type="button"
-            @click="handleSendOtp"
-            :disabled="!email || isSendingOtp"
-            class="bg-green-700 text-white py-2 rounded mt-2 hover:bg-green-600 hover:cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
+          <Button @click="handleSendOtp" :disabled="!email || isSendingOtp" class="w-full">
             {{ isSendingOtp ? "ĐANG GỬI MÃ OTP..." : "GỬI MÃ OTP" }}
-          </button>
+          </Button>
 
           <div class="flex items-center justify-center">
-            <router-link to="/login" class="text-blue-600 hover:text-blue-800 text-sm">
+            <router-link
+              to="/login"
+              class="text-primary hover:text-primary/80 hover:underline transition-colors"
+            >
               Quay lại đăng nhập
             </router-link>
           </div>
@@ -50,43 +50,46 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Mã OTP</label>
-            <input
+            <Label for="otpCode">Mã OTP</Label>
+            <Input
+              id="otpCode"
               v-model="otpCode"
               type="text"
               placeholder="Nhập mã OTP (6 chữ số)"
-              class="border px-3 py-2 rounded w-full"
+              class="w-full"
               maxlength="6"
               pattern="[0-9]{6}"
               @input="handleOtpInput"
               @keyup.enter="handleConfirmOtp"
               ref="otpInputRef"
               required
+              autofocus
             />
           </div>
 
           <div class="flex items-center justify-between text-sm">
-            <button
-              type="button"
+            <Button
               @click="handleResendOtp"
               :disabled="countdown > 0"
-              class="text-blue-600 hover:text-blue-800 underline disabled:text-gray-400 disabled:no-underline"
+              class="text-primary hover:text-primary/80 hover:underline transition-colors disabled:text-gray-400 disabled:no-underline"
             >
               {{ countdown > 0 ? `Gửi lại sau ${countdown}s` : "Gửi lại mã OTP" }}
-            </button>
-            <button type="button" @click="handleBack" class="text-gray-600 hover:text-gray-800">
+            </Button>
+            <Button
+              @click="handleBack"
+              class="text-primary hover:text-primary/80 hover:underline transition-colors"
+            >
               Quay lại
-            </button>
+            </Button>
           </div>
 
-          <button
-            type="button"
+          <Button
             @click="handleConfirmOtp"
             :disabled="!otpCode || otpCode.length !== 6"
-            class="bg-green-700 text-white py-2 rounded mt-2 hover:bg-green-600 hover:cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            class="w-full"
           >
             XÁC NHẬN OTP
-          </button>
+          </Button>
         </div>
 
         <!-- Đặt lại mật khẩu mới -->
@@ -98,40 +101,41 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Mật khẩu mới</label>
-            <input
+            <Label for="newPassword">Mật khẩu mới</Label>
+            <Input
+              id="newPassword"
               v-model="newPassword"
               type="password"
               placeholder="Nhập mật khẩu mới"
-              class="border px-3 py-2 rounded w-full"
+              class="w-full"
               @keyup.enter="handleResetPassword"
               ref="passwordInputRef"
               required
+              autofocus
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2"
-              >Xác nhận mật khẩu mới</label
-            >
-            <input
+            <Label for="confirmPassword">Xác nhận mật khẩu mới</Label>
+            <Input
+              id="confirmPassword"
               v-model="confirmPassword"
               type="password"
               placeholder="Nhập lại mật khẩu mới"
-              class="border px-3 py-2 rounded w-full"
+              class="w-full"
               @keyup.enter="handleResetPassword"
               required
+              autofocus
             />
           </div>
 
-          <button
-            type="button"
+          <Button
             @click="handleResetPassword"
             :disabled="!newPassword || !confirmPassword || isLoading"
-            class="bg-green-700 text-white py-2 rounded mt-2 hover:bg-green-600 hover:cursor-pointer transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            class="w-full"
           >
             {{ isLoading ? "ĐANG XỬ LÝ..." : "ĐẶT LẠI MẬT KHẨU" }}
-          </button>
+          </Button>
         </div>
 
         <div v-if="successMessage" class="text-green-600 text-sm text-center mt-4">
@@ -143,9 +147,7 @@
         </div>
 
         <div v-if="isLoading" class="text-center py-4">
-          <div
-            class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"
-          ></div>
+          <Loader class="w-6 h-6 animate-spin text-gray-900 mx-auto" />
         </div>
       </div>
     </div>
@@ -156,6 +158,10 @@
 import { ref, onMounted, onUnmounted, nextTick } from "vue"
 import { useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
+import Button from "../../components/ui/button/Button.vue"
+import { Input } from "../../components/ui/input"
+import { Label } from "../../components/ui/label"
+import { Loader } from "lucide-vue-next"
 
 const router = useRouter()
 const authStore = useAuthStore()

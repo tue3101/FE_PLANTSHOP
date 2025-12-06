@@ -3,102 +3,102 @@
     <!-- Optional built-in controls: Category filter + Sort -->
     <div v-if="showFilter" :class="['flex flex-col sm:flex-row gap-4 mb-2', controlsClass]">
       <div v-if="showCategoryFilter" class="sm:w-48">
-        <select
-          v-model="selectedCategoryProxy"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
-        >
-          <option value="">Tất cả danh mục</option>
-          <option
-            v-for="category in categoryOptions"
-            :key="category[categoryIdKey]"
-            :value="category[categoryIdKey]"
-          >
-            {{ category[categoryLabelKey] }}
-          </option>
-        </select>
+        <Select v-model="selectedCategoryProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả danh mục" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả danh mục</SelectItem>
+            <SelectItem
+              v-for="category in categoryOptions"
+              :key="String((category as Record<string, unknown>)[categoryIdKey])"
+              :value="String((category as Record<string, unknown>)[categoryIdKey])"
+            >
+              {{ (category as Record<string, unknown>)[categoryLabelKey] }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div v-if="showSortOption" class="sm:w-48">
-        <select
-          v-model="sortOptionProxy"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
-        >
-          <option value="">Sắp xếp mặc định</option>
-          <option value="price-asc">Giá: Tăng dần</option>
-          <option value="price-desc">Giá: Giảm dần</option>
-          <option value="name-asc">Tên: A-Z</option>
-          <option value="name-desc">Tên: Z-A</option>
-        </select>
+        <Select v-model="sortOptionProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Sắp xếp mặc định" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Sắp xếp mặc định</SelectItem>
+            <SelectItem value="price-asc">Giá: Tăng dần</SelectItem>
+            <SelectItem value="price-desc">Giá: Giảm dần</SelectItem>
+            <SelectItem value="name-asc">Tên: A-Z</SelectItem>
+            <SelectItem value="name-desc">Tên: Z-A</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div v-if="showActive" class="sm:w-48">
-        <select
-          v-model="selectedActiveProxy"
-          :class="[
-            'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:border-transparent',
-            selectedActiveProxy === 'deactive'
-              ? 'text-red-500 focus:ring-red-500'
-              : selectedActiveProxy === 'out_of_stock'
-                ? 'text-yellow-500 focus:ring-yellow-500'
-                : 'text-green-500 focus:ring-green-500',
-          ]"
-        >
-          <template v-if="useProductLabels">
-            <option value="" class="text-green-500">Đang bán</option>
-            <option value="out_of_stock" class="text-yellow-500">Tạm hết hàng</option>
-            <option value="deactive" class="text-red-500">Ngưng kinh doanh</option>
-          </template>
-          <template v-else>
-            <option value="" class="text-green-500">đang hoạt động</option>
-            <option value="deactive" class="text-red-500">không hoạt động</option>
-          </template>
-        </select>
+        <Select v-model="selectedActiveProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <template v-if="useProductLabels">
+              <SelectItem value="all">Đang bán</SelectItem>
+              <SelectItem value="out_of_stock">Tạm hết hàng</SelectItem>
+              <SelectItem value="deactive">Ngưng kinh doanh</SelectItem>
+            </template>
+            <template v-else>
+              <SelectItem value="all">Đang hoạt động</SelectItem>
+              <SelectItem value="deactive">Không hoạt động</SelectItem>
+            </template>
+          </SelectContent>
+        </Select>
       </div>
 
       <div v-if="showShippingStatusFilter" class="sm:w-48">
-        <select
-          v-model="selectedShippingStatusProxy"
-          class="w-50 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
-        >
-          <option value="">Trạng thái giao hàng</option>
-          <option
-            v-for="shipping_status in shippingStatusOption"
-            :key="shipping_status[shippingstatusValueKey]"
-            :value="shipping_status[shippingstatusValueKey]"
-          >
-            {{ shipping_status[statusLabelKey] }}
-          </option>
-        </select>
+        <Select v-model="selectedShippingStatusProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Trạng thái giao hàng" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Trạng thái giao hàng</SelectItem>
+            <SelectItem
+              v-for="shipping_status in shippingStatusOption"
+              :key="String((shipping_status as Record<string, unknown>)[shippingstatusValueKey])"
+              :value="String((shipping_status as Record<string, unknown>)[shippingstatusValueKey])"
+            >
+              {{ (shipping_status as Record<string, unknown>)[statusLabelKey] }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div v-if="showStatusFilter" class="sm:w-48">
-        <select
-          v-model="selectedStatusProxy"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option
-            v-for="status in statusOptions"
-            :key="status[statusValueKey]"
-            :value="status[statusValueKey]"
-          >
-            {{ status[statusLabelKey] }}
-          </option>
-        </select>
+        <Select v-model="selectedStatusProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
+            <SelectItem
+              v-for="status in statusOptions"
+              :key="String((status as Record<string, unknown>)[statusValueKey])"
+              :value="String((status as Record<string, unknown>)[statusValueKey])"
+            >
+              {{ (status as Record<string, unknown>)[statusLabelKey] }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div v-if="showDeletedFilter" class="sm:w-48">
-        <select
-          v-model="selectedDeletedProxy"
-          :class="[
-            'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:border-transparent',
-            selectedDeletedProxy === 'deleted'
-              ? 'text-red-500 focus:ring-red-500'
-              : 'text-green-500 focus:ring-green-500',
-          ]"
-        >
-          <option value="" class="text-green-500">Đánh giá hiện</option>
-          <option value="deleted" class="text-red-500">Đánh giá ẩn</option>
-        </select>
+        <Select v-model="selectedDeletedProxy">
+          <SelectTrigger>
+            <SelectValue placeholder="Trạng thái đánh giá" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Đánh giá hiện</SelectItem>
+            <SelectItem value="deleted">Đánh giá ẩn</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
     <!-- Slot nhận danh sách sau khi lọc + phân trang -->
@@ -110,154 +110,198 @@
     />
 
     <!-- Điều hướng trang-->
-    <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-2 select-none">
-      <button
+    <Pagination
+      v-if="totalPages > 1 && props.pageSize > 0"
+      :key="`pagination-${totalPages}-${currentPageComputed}`"
+      :items-per-page="props.pageSize"
+      :page="currentPageComputed"
+      :total="filteredItems.length"
+      class="flex justify-center items-center gap-2 mt-2"
+    >
+      <PaginationPrevious
         @click="goTo(currentPageComputed - 1)"
         :disabled="currentPageComputed === 1"
-        :class="[
-          'px-4 py-2 rounded-lg border transition-colors',
-          currentPageComputed === 1
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-500 cursor-pointer',
-        ]"
-      >
-        trước
-      </button>
-
-      <div class="flex gap-1">
-        <button
+      />
+      <PaginationContent>
+        <PaginationItem
           v-for="page in visiblePages"
           :key="page"
+          :value="page"
           @click="goTo(page)"
-          :class="[
-            'w-10 h-10 rounded-lg border transition-colors font-medium',
-            currentPageComputed === page
-              ? 'bg-green-600 text-white border-green-600 cursor-pointer'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-500 cursor-pointer',
-          ]"
+          :class="currentPageComputed === page ? 'bg-primary text-primary-foreground' : ''"
         >
           {{ page }}
-        </button>
-      </div>
-
-      <button
+        </PaginationItem>
+      </PaginationContent>
+      <PaginationNext
         @click="goTo(currentPageComputed + 1)"
         :disabled="currentPageComputed === totalPages"
-        :class="[
-          'px-4 py-2 rounded-lg border transition-colors',
-          currentPageComputed === totalPages
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-white border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-500 cursor-pointer',
-        ]"
-      >
-        sau
-      </button>
-    </div>
+      />
+    </Pagination>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, watch, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
-const props = defineProps({
-  // Nguồn dữ liệu thô
-  items: { type: Array, default: () => [] },
-  items2: { type: Array, default: () => [] },
+const props = withDefaults(
+  defineProps<{
+    items?: unknown[]
+    items2?: unknown[]
+    searchQuery?: string
+    selectedCategory?: string | number
+    sortOption?: string
+    selectedActive?: string
+    selectedStatus?: string
+    selectedShippingStatus?: string
+    selectedDeleted?: string
+    getCategoryId?: (p: unknown) => unknown
+    getName?: (p: unknown) => string
+    getDescription?: (p: unknown) => string
+    getPrice?: (p: unknown) => number
+    modelValue?: number
+    pageSize?: number
+    maxVisible?: number
+    showSummary?: boolean
+    scrollToTop?: boolean
+    syncRoute?: boolean
+    routeQueryKey?: string
+    showActive?: boolean
+    showFilter?: boolean
+    showCategoryFilter?: boolean
+    showSortOption?: boolean
+    showStatusFilter?: boolean
+    showDeletedFilter?: boolean
+    showShippingStatusFilter?: boolean
+    categoryOptions?: unknown[]
+    categoryIdKey?: string
+    categoryLabelKey?: string
+    statusOptions?: unknown[]
+    shippingStatusOption?: unknown[]
+    statusValueKey?: string
+    shippingstatusValueKey?: string
+    statusLabelKey?: string
+    useProductLabels?: boolean
+    controlsClass?: string
+  }>(),
+  {
+    items: () => [],
+    items2: () => [],
+    searchQuery: "",
+    selectedCategory: "all",
+    sortOption: "all",
+    selectedActive: "all",
+    selectedStatus: "all",
+    selectedShippingStatus: "all",
+    selectedDeleted: "all",
+    getCategoryId: (p: unknown) => (p as Record<string, unknown>)?.category_id,
+    getName: (p: unknown) => ((p as Record<string, unknown>)?.product_name as string) || "",
+    getDescription: (p: unknown) => ((p as Record<string, unknown>)?.description as string) || "",
+    getPrice: (p: unknown) => ((p as Record<string, unknown>)?.price as number) ?? 0,
+    modelValue: 1,
+    pageSize: 0,
+    maxVisible: 5,
+    showSummary: true,
+    scrollToTop: true,
+    syncRoute: false,
+    routeQueryKey: "category",
+    showActive: false,
+    showFilter: false,
+    showCategoryFilter: false,
+    showSortOption: false,
+    showStatusFilter: false,
+    showDeletedFilter: false,
+    showShippingStatusFilter: false,
+    categoryOptions: () => [],
+    categoryIdKey: "category_id",
+    categoryLabelKey: "category_name",
+    statusOptions: () => [],
+    shippingStatusOption: () => [],
+    statusValueKey: "value",
+    shippingstatusValueKey: "value",
+    statusLabelKey: "label",
+    useProductLabels: false,
+    controlsClass: "",
+  }
+)
 
-  // Bộ lọc/ tìm kiếm/ sắp xếp (tùy chọn)
-  searchQuery: { type: String, default: "" },
-  selectedCategory: { type: [String, Number], default: "" },
-  sortOption: { type: String, default: "" },
-  selectedActive: { type: String, default: "" },
-  selectedStatus: { type: String, default: "" },
-  selectedShippingStatus: { type: String, default: "" },
-  selectedDeleted: { type: String, default: "" },
+const emit = defineEmits<{
+  "update:modelValue": [value: number]
+  "update:selectedCategory": [value: string | number]
+  "update:sortOption": [value: string]
+  "update:selectedActive": [value: string]
+  "update:selectedStatus": [value: string]
+  "update:selectedShippingStatus": [value: string]
+  "update:selectedDeleted": [value: string]
+}>()
 
-  // Accessors cho các trường
-  getCategoryId: { type: Function, default: (p) => p?.category_id },
-  getName: { type: Function, default: (p) => p?.product_name },
-  getDescription: { type: Function, default: (p) => p?.description || "" },
-  getPrice: { type: Function, default: (p) => p?.price ?? 0 },
-
-  // Phân trang
-  modelValue: { type: Number, default: 1 },
-  pageSize: { type: Number, default: 0 },
-  maxVisible: { type: Number, default: 5 },
-  showSummary: { type: Boolean, default: true },
-  scrollToTop: { type: Boolean, default: true },
-
-  // Đồng bộ query URL
-  syncRoute: { type: Boolean, default: false },
-  routeQueryKey: { type: String, default: "category" },
-
-  // UI controls
-  showActive: { type: Boolean, default: false },
-  showFilter: { type: Boolean, default: false },
-  showCategoryFilter: { type: Boolean, default: false },
-  showSortOption: { type: Boolean, default: false },
-  showStatusFilter: { type: Boolean, default: false },
-  showDeletedFilter: { type: Boolean, default: false },
-  showShippingStatusFilter: { type: Boolean, default: false },
-
-  categoryOptions: { type: Array, default: () => [] },
-  categoryIdKey: { type: String, default: "category_id" },
-  categoryLabelKey: { type: String, default: "category_name" },
-  statusOptions: { type: Array, default: () => [] },
-  shippingStatusOption: { type: Array, default: () => [] },
-  statusValueKey: { type: String, default: "value" },
-  shippingstatusValueKey: { type: String, default: "value" },
-  statusLabelKey: { type: String, default: "label" },
-  useProductLabels: { type: Boolean, default: false },
-  controlsClass: { type: String, default: "" },
-})
-
-const emit = defineEmits([
-  "update:modelValue",
-  "update:selectedCategory",
-  "update:sortOption",
-  "update:selectedActive",
-  "update:selectedStatus",
-  "update:selectedShippingStatus",
-  "update:selectedDeleted",
-])
 const route = useRoute()
 const router = useRouter()
 
 // Lọc + tìm kiếm
 const filteredItems = computed(() => {
-  let sourceItems
-  if (props.selectedActive === "deactive") {
-    sourceItems = props.items2 ? [...props.items2] : []
-  } else if (props.selectedActive === "out_of_stock") {
+  let sourceItems: unknown[]
+  // Normalize selectedActive: treat empty string or "all" as active items
+  const normalizedActive = !props.selectedActive || props.selectedActive === "" || props.selectedActive === "all" ? null : props.selectedActive
+  
+  // Ensure we get the actual array values from props
+  const itemsArray = Array.isArray(props.items) ? props.items : []
+  const items2Array = Array.isArray(props.items2) ? props.items2 : []
+  
+  if (normalizedActive === "deactive") {
+    sourceItems = [...items2Array]
+  } else if (normalizedActive === "out_of_stock") {
     // Nếu selectedActive là 'out_of_stock', sử dụng items2 (đã được filter từ ProductView)
-    sourceItems = props.items2 ? [...props.items2] : []
+    sourceItems = [...items2Array]
   } else {
-    sourceItems = props.items ? [...props.items] : []
+    // Default: use active items (items)
+    sourceItems = [...itemsArray]
   }
 
   let result = sourceItems
 
-  if (props.selectedCategory) {
-    result = result.filter((p) => props.getCategoryId(p) == props.selectedCategory)
+  // Normalize selectedCategory: treat empty string as "all"
+  const normalizedCategory = !props.selectedCategory || props.selectedCategory === "" || String(props.selectedCategory) === "all" ? null : props.selectedCategory
+  
+  if (normalizedCategory) {
+    result = result.filter((p) => props.getCategoryId(p) == normalizedCategory)
   }
 
-  if (props.selectedStatus) {
-    result = result.filter((p) => p.status === props.selectedStatus)
+  if (props.selectedStatus && props.selectedStatus !== "all") {
+    result = result.filter((p) => (p as Record<string, unknown>).status === props.selectedStatus)
   }
 
-  if (props.selectedShippingStatus) {
+  if (props.selectedShippingStatus && props.selectedShippingStatus !== "all") {
     if (props.selectedShippingStatus === "NOT_DELIVERED") {
       // Gộp các trạng thái chưa giao: UNDELIVERED, PREPARING_ORDER, SHIPPING
-      result = result.filter(
-        (p) =>
-          p.shipping_status === "UNDELIVERED" ||
-          p.shipping_status === "PREPARING_ORDER" ||
-          p.shipping_status === "SHIPPING"
-      )
+      result = result.filter((p) => {
+        const item = p as Record<string, unknown>
+        return (
+          item.shipping_status === "UNDELIVERED" ||
+          item.shipping_status === "PREPARING_ORDER" ||
+          item.shipping_status === "SHIPPING"
+        )
+      })
     } else {
       // Lọc theo trạng thái giao hàng chính xác: DELIVERED, CANCELLED (Giao thất bại), etc.
-      result = result.filter((p) => p.shipping_status === props.selectedShippingStatus)
+      result = result.filter(
+        (p) => (p as Record<string, unknown>).shipping_status === props.selectedShippingStatus
+      )
     }
   }
 
@@ -272,7 +316,7 @@ const filteredItems = computed(() => {
     })
   }
 
-  if (props.sortOption) {
+  if (props.sortOption && props.sortOption !== "all") {
     result = [...result].sort((a, b) => {
       switch (props.sortOption) {
         case "price-asc":
@@ -293,14 +337,15 @@ const filteredItems = computed(() => {
 })
 
 // tính tổng trang cần hiển thị sau filter
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredItems.value.length / props.pageSize))
-)
+const totalPages = computed(() => {
+  if (props.pageSize <= 0) return 1
+  return Math.max(1, Math.ceil(filteredItems.value.length / props.pageSize))
+})
 
 //sự kiện emit
 const currentPageComputed = computed({
   get: () => Math.min(Math.max(1, props.modelValue || 1), totalPages.value),
-  set: (val) => emit("update:modelValue", val),
+  set: (val: number) => emit("update:modelValue", val),
 })
 //tính item đầu tiên trong ds
 computed(() => (currentPageComputed.value - 1) * props.pageSize + 1)
@@ -309,6 +354,7 @@ computed(() => Math.min(currentPageComputed.value * props.pageSize, filteredItem
 
 //số item mỗi trang
 const paginatedItems = computed(() => {
+  if (props.pageSize <= 0) return filteredItems.value
   const start = (currentPageComputed.value - 1) * props.pageSize
   const end = start + props.pageSize
   return filteredItems.value.slice(start, end)
@@ -317,7 +363,7 @@ const paginatedItems = computed(() => {
 //hiển thị số trang trên tổng trang
 const visiblePages = computed(() => {
   const t = totalPages.value
-  const pages = []
+  const pages: number[] = []
   const maxVisible = Math.max(1, props.maxVisible)
   let start = Math.max(1, currentPageComputed.value - Math.floor(maxVisible / 2))
   let end = Math.min(t, start + maxVisible - 1)
@@ -329,7 +375,7 @@ const visiblePages = computed(() => {
 })
 
 //gửi emit cho cha cập nhật lại giá trị và cuộn lên đầu trang sau chuyển
-function goTo(p) {
+function goTo(p: number): void {
   if (p < 1 || p > totalPages.value) return
   currentPageComputed.value = p
   if (props.scrollToTop) {
@@ -358,7 +404,7 @@ watch(
   async (newCategory) => {
     currentPageComputed.value = 1
     if (!props.syncRoute) return
-    const desiredCategory = newCategory ? String(newCategory) : undefined
+    const desiredCategory = newCategory && newCategory !== "all" ? String(newCategory) : undefined
     if (route?.query?.[props.routeQueryKey] !== desiredCategory) {
       await router.push({ query: { ...route.query, [props.routeQueryKey]: desiredCategory } })
     }
@@ -368,38 +414,48 @@ watch(
 onMounted(() => {
   if (!props.syncRoute) return
   const q = route?.query?.[props.routeQueryKey]
-  if (q !== undefined) {
+  if (q !== undefined && String(q) !== "all") {
     emit("update:selectedCategory", String(q))
+  } else {
+    emit("update:selectedCategory", "all")
   }
 })
 
 // emit sau chọn category
 const selectedCategoryProxy = computed({
-  get: () => props.selectedCategory,
-  set: (v) => emit("update:selectedCategory", v),
+  get: () => {
+    const val = props.selectedCategory
+    // Normalize: convert empty string to "all"
+    if (!val || val === "" || String(val) === "all") return "all"
+    return String(val)
+  },
+  set: (v: string) => {
+    // Normalize: convert "all" to empty string for backward compatibility with parent components
+    emit("update:selectedCategory", v === "all" ? "" : v)
+  },
 })
 //emit sau chọn option
 const sortOptionProxy = computed({
-  get: () => props.sortOption,
-  set: (v) => emit("update:sortOption", v),
+  get: () => props.sortOption || "all",
+  set: (v: string) => emit("update:sortOption", v),
 })
 
 const selectedActiveProxy = computed({
-  get: () => props.selectedActive,
-  set: (v) => emit("update:selectedActive", v),
+  get: () => props.selectedActive || "all",
+  set: (v: string) => emit("update:selectedActive", v),
 })
 
 const selectedStatusProxy = computed({
-  get: () => props.selectedStatus,
-  set: (v) => emit("update:selectedStatus", v),
+  get: () => props.selectedStatus || "all",
+  set: (v: string) => emit("update:selectedStatus", v),
 })
 const selectedShippingStatusProxy = computed({
-  get: () => props.selectedShippingStatus,
-  set: (v) => emit("update:selectedShippingStatus", v),
+  get: () => props.selectedShippingStatus || "all",
+  set: (v: string) => emit("update:selectedShippingStatus", v),
 })
 
 const selectedDeletedProxy = computed({
-  get: () => props.selectedDeleted,
-  set: (v) => emit("update:selectedDeleted", v),
+  get: () => props.selectedDeleted || "all",
+  set: (v: string) => emit("update:selectedDeleted", v),
 })
 </script>

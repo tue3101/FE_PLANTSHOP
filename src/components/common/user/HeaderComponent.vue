@@ -23,7 +23,7 @@
         </router-link> -->
 
         <!-- Logged In - User Menu -->
-        <div class="relative z-[100]">
+        <div class="relative z-100">
           <button
             @click="toggleUserMenu"
             class="cursor-pointer hover:opacity-80 flex items-center gap-2"
@@ -35,7 +35,7 @@
           <!-- Dropdown Menu -->
           <div
             v-if="showUserMenu"
-            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
+            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-100"
             @click.stop
           >
             <button
@@ -44,18 +44,19 @@
             >
               Xem thông tin
             </button>
-            <button
+            <Button
+              variant="destructive"
               @click="handleLogout"
-              class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+              class="w-full"
             >
               Đăng xuất
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <!-- Overlay để đóng dropdown khi click bên ngoài -->
-      <div v-if="showUserMenu" @click="closeUserMenu" class="fixed inset-0 z-[90]"></div>
+      <div v-if="showUserMenu" @click="closeUserMenu" class="fixed inset-0 z-90"></div>
     </div>
 
     <!-- Bottom Navigation -->
@@ -73,14 +74,14 @@
             <!-- Danh mục Menu (Multi-level) -->
             <div
               v-if="item.name === 'Danh Mục'"
-              class="relative z-[100]"
+              class="relative z-100"
               @mouseenter="handleCategoryMenuEnter"
               @mouseleave="handleCategoryMenuLeave"
             >
               <button
                 @click.stop="toggleCategoryMenu"
                 class="p-4 h-20 text-xl font-bold text-green-700 hover:text-green-500 flex items-center transition-all duration-200 cursor-pointer"
-                :class="route.path === item.to ? '!text-green-500' : ''"
+                :class="route.path === item.to ? 'text-green-500!' : ''"
               >
                 <Menu class="w-6 h-6 mr-2" :class="{ 'rotate-180': showCategoryMenu }" />
                 <span>{{ item.name }}</span>
@@ -91,7 +92,7 @@
                 v-if="showCategoryMenu && categories.length > 0"
                 @mouseenter="handleCategoryMenuEnter"
                 @mouseleave="handleCategoryMenuLeave"
-                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
+                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-100"
               >
                 <div
                   v-for="category in categories"
@@ -122,7 +123,7 @@
               <!-- Empty state nếu chưa có categories -->
               <div
                 v-else-if="showCategoryMenu && categories.length === 0"
-                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[100]"
+                class="absolute top-full left-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-100"
               >
                 <div class="px-4 py-2 text-sm text-gray-500">Đang tải danh mục...</div>
               </div>
@@ -133,7 +134,7 @@
               v-else
               :to="item.to"
               class="p-4 h-20 text-xl font-bold text-green-700 hover:text-green-500 flex items-center transition-all duration-200"
-              :class="route.path === item.to ? '!text-green-500' : ''"
+              :class="route.path === item.to ? 'text-green-500!' : ''"
             >
               {{ item.name }}
             </router-link>
@@ -164,16 +165,23 @@
   </header>
 </template>
 
-<script setup>
-import { Phone, ShoppingCart, Clock, Menu } from "lucide-vue-next"
+<script setup lang="ts">
+import { Phone, ShoppingCart, Clock, Menu, User } from "lucide-vue-next"
 import SearchCommon from "../SearchCommon.vue"
 import { useRouter, useRoute } from "vue-router"
 import { computed, ref, onMounted, watch } from "vue"
-import { User } from "lucide-vue-next"
 import { useAuthStore } from "@/stores/auth"
 import { useUserStore } from "@/stores/user"
 import { useCartStore } from "@/stores/cart"
 import { useProductStore } from "@/stores/products"
+import type { Category } from "@/types/store.types"
+import { Button } from "@/components/ui/button"
+import { toastSuccess, toastError } from "@/utils/toast"
+
+interface HeaderItem {
+  name: string
+  to: string
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -181,12 +189,13 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const productStore = useProductStore()
-const showUserMenu = ref(false)
-const showCategoryMenu = ref(false)
-const searchQuery = ref("")
+const showUserMenu = ref<boolean>(false)
+const showCategoryMenu = ref<boolean>(false)
+const searchQuery = ref<string>("")
 
-// Hàm chung để load user info (tránh trùng lặp code)
-const loadUserInfo = async () => {
+let leaveTimeout: ReturnType<typeof setTimeout> | null = null
+
+const loadUserInfo = async (): Promise<void> => {
   if (authStore.isAuthenticated && !userStore.userInfo) {
     try {
       await userStore.getInfo()
@@ -196,8 +205,7 @@ const loadUserInfo = async () => {
   }
 }
 
-// Load categories
-const loadCategories = async () => {
+const loadCategories = async (): Promise<void> => {
   try {
     await productStore.getCategories()
   } catch (error) {
@@ -205,34 +213,29 @@ const loadCategories = async () => {
   }
 }
 
-// Computed categories
-const categories = computed(() => {
+const categories = computed<Category[]>(() => {
   return productStore.categories || []
 })
 
-// Load cart từ backend
-const loadCart = async () => {
+const loadCart = async (): Promise<void> => {
   if (authStore.isAuthenticated && authStore.userId) {
     try {
       await cartStore.loadCartFromBackend(authStore.userId)
     } catch (error) {
-      // Không hiển thị lỗi nếu giỏ hàng trống - đây là trạng thái bình thường
       console.log("Cart loaded (may be empty):", error)
     }
   }
 }
 
-// Gọi api lấy userinfo, categories và cart khi component mount
 onMounted(() => {
   loadUserInfo()
   loadCategories()
   loadCart()
 })
 
-// Theo dõi khi đăng nhập
 watch(
   () => authStore.isAuthenticated,
-  (isAuthenticated) => {
+  (isAuthenticated: boolean) => {
     loadUserInfo()
     if (isAuthenticated) {
       loadCart()
@@ -240,23 +243,18 @@ watch(
   }
 )
 
-// Toggle user menu
-const toggleUserMenu = () => {
+const toggleUserMenu = (): void => {
   showUserMenu.value = !showUserMenu.value
 }
 
-// Toggle category menu
-const toggleCategoryMenu = () => {
+const toggleCategoryMenu = (): void => {
   showCategoryMenu.value = !showCategoryMenu.value
-  // Đảm bảo categories được load khi mở menu lần đầu
   if (showCategoryMenu.value && categories.value.length === 0) {
     loadCategories()
   }
 }
 
-// để ngăn menu danh mục đóng khi trỏ chuột vào
-let leaveTimeout = null
-const handleCategoryMenuEnter = () => {
+const handleCategoryMenuEnter = (): void => {
   if (leaveTimeout) {
     clearTimeout(leaveTimeout)
     leaveTimeout = null
@@ -264,20 +262,17 @@ const handleCategoryMenuEnter = () => {
   showCategoryMenu.value = true
 }
 
-const handleCategoryMenuLeave = () => {
-  // Delay một chút để tránh đóng menu khi di chuyển chuột vào dropdown
+const handleCategoryMenuLeave = (): void => {
   leaveTimeout = setTimeout(() => {
     showCategoryMenu.value = false
   }, 200)
 }
 
-// Đóng user menu
-const closeUserMenu = () => {
+const closeUserMenu = (): void => {
   showUserMenu.value = false
 }
 
-// Lấy username
-const getUsername = () => {
+const getUsername = (): string => {
   if (userStore.userInfo?.username) {
     return userStore.userInfo.username
   }
@@ -287,41 +282,39 @@ const getUsername = () => {
   return "User"
 }
 
-// xem thông tin
-const handleViewProfile = () => {
+const handleViewProfile = (): void => {
   closeUserMenu()
   router.push("/userinfo")
 }
 
-//  logout
-const handleLogout = async () => {
+const handleLogout = async (): Promise<void> => {
   try {
     await authStore.logout()
+    toastSuccess("Đăng xuất thành công!")
     userStore.userInfo = null
     closeUserMenu()
     router.push("/login")
   } catch (error) {
+    toastError("Đăng xuất thất bại!")
     console.error(error)
   }
 }
 
-// Tính toán số lượng sản phẩm trong giỏ hàng (tổng số lượng tất cả items)
-const cartItemsCount = computed(() => {
+const cartItemsCount = computed<number>(() => {
   return cartStore.totalItems || 0
 })
 
-//click vào icon giỏ hàng
-const handleCartClick = () => {
+const handleCartClick = (): void => {
   router.push("/cart")
 }
 
-const headerItems = computed(() => {
+const headerItems = computed<HeaderItem[]>(() => {
   const homePageRoute = router.options.routes.find((r) => r.name === "homepage")
   if (homePageRoute && homePageRoute.children) {
     return homePageRoute.children
       .filter((child) => child.meta?.isShow)
       .map((child) => ({
-        name: child.meta.title,
+        name: child.meta?.title as string,
         to: "/" + child.path,
       }))
   }

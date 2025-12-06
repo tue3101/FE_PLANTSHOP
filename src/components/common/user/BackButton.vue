@@ -1,20 +1,22 @@
 <template>
-  <button
+  <Button
+    variant="ghost"
     @click="handleBack"
-    class="mb-6 text-gray-600 hover:text-gray-800 flex items-center gap-2 transition-all duration-200 hover:gap-3 cursor-pointer"
+    class="mb-6 flex items-center gap-2"
   >
     <ArrowLeft :size="20" />
     <span>Quay lại</span>
-  </button>
+  </Button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft } from "lucide-vue-next"
 import { useRouter } from "vue-router"
+import { Button } from "@/components/ui/button"
 
 const router = useRouter()
 
-const handleBack = () => {
+const handleBack = (): void => {
   router.back()
 }
 </script>

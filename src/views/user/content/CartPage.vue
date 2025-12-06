@@ -89,7 +89,7 @@
             <!-- Overlay sản phẩm hết hàng -->
             <div
               v-if="isDeleted(item)"
-              class="absolute inset-0 z-[5] flex items-center justify-center rounded-lg pointer-events-none"
+              class="absolute inset-0 z-5 flex items-center justify-center rounded-lg pointer-events-none"
             >
               <div class="bg-white/50 bg-opacity-90 px-6 py-3 rounded-full shadow-lg">
                 <p class="text-lg font-semibold text-red-500">Sản phẩm ngưng kinh doanh</p>
@@ -97,7 +97,7 @@
             </div>
             <div
               v-else-if="isOutOfStock(item)"
-              class="absolute inset-0 z-[5] flex items-center justify-center rounded-lg pointer-events-none"
+              class="absolute inset-0 z-5 flex items-center justify-center rounded-lg pointer-events-none"
             >
               <div class="bg-white/50 bg-opacity-90 px-6 py-3 rounded-full shadow-lg">
                 <p class="text-lg font-semibold text-red-500">Sản phẩm tạm hết</p>
@@ -106,7 +106,7 @@
 
             <!-- Product Image -->
             <div
-              class="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
+              class="shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
               :class="{ 'pointer-events-none opacity-50': isOutOfStock(item) || isDeleted(item) }"
             >
               <img
@@ -184,7 +184,7 @@
 
             <!-- Item Total -->
             <div
-              class="flex-shrink-0 text-right"
+              class="shrink-0 text-right"
               :class="{ 'pointer-events-none opacity-50': isOutOfStock(item) || isDeleted(item) }"
             >
               <p class="text-lg font-bold text-gray-800">
@@ -724,39 +724,16 @@ const checkUserOrders = async () => {
   }
 
   try {
-    const response = await orderStore.getOrdersByUserIdStore(userId)
+    await orderStore.getOrdersByUserIdStore(userId)
 
-    console.log("=== DEBUG CHECK ORDERS ===")
-    console.log("Response:", response)
-    console.log("Response.data:", response?.data)
-    console.log("Response.data.success:", response?.data?.success)
-    console.log("Response.data.data:", response?.data?.data)
-    console.log("OrderStore.orders:", orderStore.orders)
+    // Lấy danh sách orders từ store (đã được set bởi store)
+    const ordersList = orderStore.orders || []
 
-    // Kiểm tra cả response và store
-    let ordersList = null
-    if (response?.data?.success && response.data.data) {
-      ordersList = response.data.data
-      console.log("Using response.data.data:", ordersList)
-    } else if (orderStore.orders && Array.isArray(orderStore.orders)) {
-      ordersList = orderStore.orders
-      console.log("Using orderStore.orders:", ordersList)
-    }
-
-    console.log("ordersList:", ordersList)
-    console.log("Is array?", Array.isArray(ordersList))
-    console.log("Length:", ordersList?.length)
-
-    if (ordersList && Array.isArray(ordersList)) {
-      hasOrders.value = ordersList.length > 0
-      console.log("hasOrders set to:", hasOrders.value)
+    if (Array.isArray(ordersList) && ordersList.length > 0) {
+      hasOrders.value = true
     } else {
       hasOrders.value = false
-      console.log("hasOrders set to false - ordersList is not valid array")
     }
-
-    console.log("Final hasOrders:", hasOrders.value)
-    console.log("=== END DEBUG ===")
   } catch (error) {
     console.error("Error checking orders:", error)
     hasOrders.value = false

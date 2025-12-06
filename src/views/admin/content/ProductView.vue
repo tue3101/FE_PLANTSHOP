@@ -132,32 +132,6 @@
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
-    <DeleteModal
-      :showModal="showDeleteSuccessModal"
-      mode="delete-success"
-      @close="handleDeleteSuccessClose"
-    />
-
-    <!-- Add Success Modal -->
-    <DeleteModal
-      :showModal="showAddSuccessModal"
-      mode="add-success"
-      @close="handleAddSuccessClose"
-    />
-
-    <!-- Update Success Modal -->
-    <DeleteModal
-      :showModal="showUpdateSuccessModal"
-      mode="update-success"
-      @close="handleUpdateSuccessClose"
-    />
-
-    <!-- Restore Success Modal -->
-    <DeleteModal
-      :showModal="showRestoreSuccessModal"
-      mode="restore-success"
-      @close="handleRestoreSuccessClose"
-    />
   </div>
 </template>
 
@@ -175,6 +149,7 @@ import { useAsyncOperation } from "@/composables/useAsyncOperation"
 import { useProductStore } from "@/stores/products"
 import { useAuthStore } from "@/stores/auth"
 import ButtonCommon from "@/components/common/admin/ButtonCommon.vue"
+import { toastSuccess, toastError } from "@/utils/toast"
 
 //datapager
 const searchQuery = ref("")
@@ -268,12 +243,14 @@ const handleAddProduct = async (productData) => {
       await refreshProductsData()
       closeAddModal()
       addError.value = ""
+      toastSuccess("Thêm sản phẩm thành công!")
       showAddSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể thêm sản phẩm!",
       onError: (error) => {
         addError.value = error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể thêm sản phẩm!")
       },
     }
   )
@@ -337,12 +314,14 @@ const handleUpdateProduct = async (productData) => {
       await refreshProductsData()
       closeUpdateModal()
       updateError.value = ""
+      toastSuccess("Cập nhật sản phẩm thành công!")
       showUpdateSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể cập nhật sản phẩm!",
       onError: (error) => {
         updateError.value = error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể cập nhật sản phẩm!")
       },
     }
   )
@@ -387,10 +366,14 @@ async function handleDeleteConfirm() {
       await productStore.deleteProduct(productId)
       await refreshProductsData()
       showDeleteConfirmModal.value = false
+      toastSuccess("Xóa sản phẩm thành công!")
       showDeleteSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể xóa sản phẩm!",
+      onError: (error) => {
+        toastError(error.response?.data?.message || "Không thể xóa sản phẩm!")
+      },
     }
   )
 }
@@ -409,12 +392,14 @@ async function handleRestore(item) {
     async () => {
       await productStore.restoreProductStore(productId)
       await refreshProductsData()
+      toastSuccess("Khôi phục sản phẩm thành công!")
       showRestoreSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể khôi phục sản phẩm!",
       onError: (error) => {
         const errorMessage = error.response?.data?.message
+        toastError(errorMessage || "Không thể khôi phục sản phẩm!")
         console.error("Restore error:", errorMessage || error)
       },
     }

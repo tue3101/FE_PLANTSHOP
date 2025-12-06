@@ -2,9 +2,7 @@
   <div class="flex min-h-screen items-center justify-center bg-gray-100">
     <div class="text-center">
       <div v-if="isLoading" class="mb-4">
-        <div
-          class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"
-        ></div>
+        <Loader class="w-12 h-12 animate-spin text-green-600 mx-auto" />
         <p class="mt-4 text-gray-600">Đang xử lý đăng nhập Google...</p>
       </div>
       <div v-if="errorMessage" class="text-red-600">
@@ -23,6 +21,8 @@ import { onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
+import { toastSuccess, toastError } from "@/utils/toast"
+import { Loader } from "lucide-vue-next"
 
 const route = useRoute()
 const router = useRouter()
@@ -63,6 +63,8 @@ onMounted(async () => {
 
       console.log("Google login successful, response:", response.data)
 
+      toastSuccess("Đăng nhập Google thành công!")
+
       const role = authStore.userRole
       const returnUrl = sessionStorage.getItem("returnUrl") || "/"
       sessionStorage.removeItem("returnUrl")
@@ -76,6 +78,10 @@ onMounted(async () => {
     },
     {
       defaultErrorMessage: "Đăng nhập Google thất bại!",
+      onError: (error) => {
+        const errorMessage = error?.response?.data?.message || "Đăng nhập Google thất bại!"
+        toastError(errorMessage)
+      },
     }
   )
 })

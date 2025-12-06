@@ -1,40 +1,25 @@
 <template>
-  <div
-    v-if="showModal"
-    class="fixed inset-0 flex items-center justify-center z-50"
-    @click.self="handleClose"
-  >
-    <div
+  <Dialog :open="showModal" @update:open="handleOpenChange">
+    <DialogContent
       ref="modalRef"
-      class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+      class="max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
       :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     >
-      <!-- Header -->
-      <div
-        class="flex items-center justify-between p-6 border-b cursor-move select-none"
-        @mousedown="handleMouseDown"
-      >
-        <h2 class="text-2xl font-bold text-gray-800">{{ title }}</h2>
-        <button
-          @click="handleClose"
-          class="text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
-        >
-          <X :size="24" />
-        </button>
-      </div>
+      <DialogHeader @mousedown="handleMouseDown">
+        <DialogTitle class="text-2xl font-bold">{{ title }}</DialogTitle>
+      </DialogHeader>
 
-      <!-- Content -->
       <div class="p-6">
         <div v-if="item">
           <!-- Layout 2 cột: Ảnh bên trái, thông tin bên phải -->
           <div class="flex flex-col md:flex-row gap-6">
             <!-- Cột trái: Hình ảnh -->
-            <div v-if="imageField" class="md:w-1/3 flex-shrink-0">
+            <div v-if="imageField" class="md:w-1/3 shrink-0">
               <div>
                 <img
                   :src="getImageUrl(item[imageField.key])"
                   :alt="imageField.label"
-                  class="w-full h-auto rounded-lg shadow-md object-contain border border-gray-200"
+                  class="w-full h-auto rounded-lg shadow-md object-contain border"
                   @error="handleImageError"
                 />
               </div>
@@ -60,57 +45,74 @@
             </div>
           </div>
         </div>
-        <div v-else class="text-center text-gray-500 py-8">Không có dữ liệu để hiển thị</div>
+        <div v-else class="text-center text-muted-foreground py-8">
+          Không có dữ liệu để hiển thị
+        </div>
       </div>
 
-      <!-- Footer -->
-      <div class="flex justify-end p-6 border-t">
-        <button
-          @click="handleClose"
-          class="px-6 py-2 bg-gray-300 rounded hover:bg-gray-400 transition-colors cursor-pointer"
-        >
-          Đóng
-        </button>
-      </div>
-    </div>
-  </div>
+      <DialogFooter>
+        <Button variant="outline" @click="handleClose">Đóng</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
-<script setup>
-import { ref, computed } from "vue"
+<script setup lang="ts">
+import { ref, computed, type Ref } from "vue"
 import { useDragModal } from "@/composables/useDragModal"
 import { X } from "lucide-vue-next"
 import { getCityById, getDistrictById } from "@/constants/locations"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
-const props = defineProps({
-  showModal: {
-    type: Boolean,
-    default: false,
-  },
-  title: {
-    type: String,
-    default: "Chi tiết",
-  },
-  item: {
-    type: Object,
-    default: null,
-  },
-  fields: {
-    type: Array,
-    required: true,
-    default: () => [],
-  },
-  options: {
-    type: Object,
-    default: () => ({}),
-  },
-})
+const props = withDefaults(
+  defineProps<{
+    showModal?: boolean
+    title?: string
+    item?: Record<string, unknown> | null
+    fields: Array<{
+      key: string
+      type: string
+      label: string
+      optionsKey?: string
+      optionValue?: string
+      optionLabel?: string
+    }>
+    options?: Record<string, unknown[]>
+  }>(),
+  {
+    showModal: false,
+    title: "Chi tiết",
+    item: null,
+    options: () => ({}),
+  }
+)
 
-const emit = defineEmits(["close", "update:showModal"])
+const emit = defineEmits<{
+  close: []
+  "update:showModal": [value: boolean]
+}>()
 
 // Drag functionality
-const modalRef = ref(null)
-const { position, handleMouseDown } = useDragModal(props)
+const modalRef: Ref<HTMLElement | null> = ref(null)
+const dragModalProps = {
+  get showModal() {
+    return props.showModal || false
+  },
+}
+const { position, handleMouseDown } = useDragModal(dragModalProps)
+
+const handleOpenChange = (open: boolean): void => {
+  if (!open) {
+    handleClose()
+  }
+}
 
 // Không cần location store nữa, sử dụng dữ liệu cố định từ constants
 
@@ -136,12 +138,22 @@ const textFields = computed(() => {
   })
 })
 
-const handleClose = () => {
+const handleClose = (): void => {
   emit("close")
   emit("update:showModal", false)
 }
 
-const formatValue = (value, field) => {
+const formatValue = (
+  value: unknown,
+  field: {
+    key: string
+    type: string
+    label: string
+    optionsKey?: string
+    optionValue?: string
+    optionLabel?: string
+  }
+): string => {
   if (value === null || value === undefined || value === "") {
     return "Không có dữ liệu"
   }
@@ -167,8 +179,10 @@ const formatValue = (value, field) => {
 
   // Format select options
   if (field.type === "select" && field.optionsKey && props.options[field.optionsKey]) {
-    const option = props.options[field.optionsKey].find((opt) => opt[field.optionValue] === value)
-    return option ? option[field.optionLabel] : value
+    const option = props.options[field.optionsKey].find(
+      (opt) => opt[field.optionValue || "value"] === value
+    )
+    return option ? option[field.optionLabel || "label"] : String(value)
   }
 
   // Format discount value (nếu có type từ item)
@@ -189,11 +203,14 @@ const formatValue = (value, field) => {
     return value ? "Có" : "Không"
   }
 
-  return value
+  return String(value)
 }
 
 // Format địa chỉ hoàn chỉnh (ghép address + district + city)
-const formatAddress = (item, field) => {
+const formatAddress = (
+  item: Record<string, unknown>,
+  field: { key: string; type: string; label: string }
+): string => {
   if (!item) return "Không có dữ liệu"
 
   const address = item.address || item[field.key] || ""
@@ -222,7 +239,7 @@ const formatAddress = (item, field) => {
 
     if (districtName && cityName) {
       // Ghép địa chỉ hoàn chỉnh: "Địa chỉ, Quận, Thành phố"
-      const parts = []
+      const parts: string[] = []
       if (address && address.trim()) {
         parts.push(address.trim())
       }
@@ -237,7 +254,7 @@ const formatAddress = (item, field) => {
   return address || "Không có dữ liệu"
 }
 
-const getImageUrl = (url) => {
+const getImageUrl = (url: string | undefined): string => {
   if (!url) return "/img/footer.png"
   if (url.includes("cloudinary")) {
     return url
@@ -245,9 +262,10 @@ const getImageUrl = (url) => {
   return url
 }
 
-const handleImageError = (event) => {
-  if (!event.target.src.includes("footer.png")) {
-    event.target.src = "/img/footer.png"
+const handleImageError = (event: Event): void => {
+  const target = event.target as HTMLImageElement
+  if (!target.src.includes("footer.png")) {
+    target.src = "/img/footer.png"
   }
 }
 </script>

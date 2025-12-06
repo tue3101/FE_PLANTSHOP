@@ -57,7 +57,7 @@
                 <img
                   :src="getProductImage(item)"
                   :alt="getProductName(item)"
-                  class="w-24 h-24 object-contain bg-gray-50 rounded-lg border border-gray-200 flex-shrink-0"
+                  class="w-24 h-24 object-contain bg-gray-50 rounded-lg border border-gray-200 shrink-0"
                   @error="handleImageError($event)"
                 />
                 <div class="flex-1 min-w-0">
@@ -71,7 +71,7 @@
                     <span class="text-gray-500">x {{ item.quantity }}</span>
                   </div>
                 </div>
-                <div class="text-right flex-shrink-0">
+                <div class="text-right shrink-0">
                   <p class="font-bold text-gray-900 text-lg">
                     {{ formatPrice((item.price || 0) * item.quantity) }}
                   </p>
@@ -307,6 +307,7 @@ import BackButton from "@/components/common/user/BackButton.vue"
 import DepositModal from "@/components/common/user/DepositModal.vue"
 import { ShoppingCart } from "lucide-vue-next"
 import { Lightbulb } from "lucide-vue-next"
+import { toastError } from "@/utils/toast"
 
 const router = useRouter()
 const route = useRoute()
@@ -1321,14 +1322,14 @@ const handleCreateOrder = async () => {
 
         const response = await orderStore.createNewOrder(orderData)
 
-        console.log("📥 PaymentPage - Order creation response:", response?.data)
+        console.log("📥 PaymentPage - Order creation response:", response)
 
-        console.log("Order creation response:", response.data)
+        console.log("Order creation response:", response)
 
-        if (response.data.success) {
+        if (response.success) {
           // Lấy order data từ response
-          const orderData = response.data.data
-          const orderId = orderData?.order_id || response.data.order_id || orderData?.id
+          const orderData = response.data
+          const orderId = orderData?.order_id || response.order_id || orderData?.id
 
           if (!orderId) {
             throw new Error("Không thể lấy order ID từ response!")
@@ -1421,6 +1422,7 @@ const handleCreateOrder = async () => {
         onError: (error) => {
           console.error("Order creation error:", error)
           errorMessage.value = error.response?.data?.message || error.message
+          toastError(error.response?.data?.message || error.message || "Không thể tạo đơn hàng!")
         },
       }
     )
@@ -1533,11 +1535,11 @@ const handleCreateOrderForDeposit = async () => {
 
         const response = await orderStore.createNewOrder(orderData)
 
-        if (response.data.success) {
+        if (response.success) {
           // Lấy order data từ response
-          const orderDataFromResponse = response.data.data
+          const orderDataFromResponse = response.data
           const orderId =
-            orderDataFromResponse?.order_id || response.data.order_id || orderDataFromResponse?.id
+            orderDataFromResponse?.order_id || response.order_id || orderDataFromResponse?.id
 
           if (!orderId) {
             throw new Error("Không thể lấy order ID từ response!")

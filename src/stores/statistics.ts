@@ -1,0 +1,89 @@
+import { defineStore } from "pinia"
+import { ref, type Ref } from "vue"
+import {
+  getTotalProductsSoldByMonth,
+  getTotalProductsSoldByYear,
+} from "@/api/statistics/statistics"
+import type { ApiResponse } from "@/types/api.types"
+
+export const useStatisticsStore = defineStore("statistics", () => {
+  const totalProductsSoldByMonth: Ref<number> = ref(0)
+  const totalProductsSoldByYear: Ref<number> = ref(0)
+  const loadingProductsSold: Ref<boolean> = ref(false)
+
+  /**
+   * Lấy tổng số sản phẩm bán được theo tháng
+   * @param year - Năm
+   * @param month - Tháng (1-12)
+   */
+  const getTotalProductsSoldByMonthStore = async (
+    year: number,
+    month: number
+  ): Promise<ApiResponse> => {
+    loadingProductsSold.value = true
+    try {
+      const response = await getTotalProductsSoldByMonth(year, month)
+      console.log("📦 Total Products Sold By Month Response:", response)
+
+      let total = 0
+
+      if (response.success && response.data) {
+        const data = response.data
+        if (data && typeof data === "object") {
+          total = (data as any).totalQuantitySold || 0
+        }
+      }
+
+      console.log("📦 Total products sold by month (final):", total)
+      totalProductsSoldByMonth.value = Number(total) || 0
+      console.log("✅ Store value after update:", totalProductsSoldByMonth.value)
+      return response
+    } catch (error) {
+      console.error("❌ Get total products sold by month error:", error)
+      totalProductsSoldByMonth.value = 0
+      throw error
+    } finally {
+      loadingProductsSold.value = false
+    }
+  }
+
+  /**
+   * Lấy tổng số sản phẩm bán được theo năm
+   * @param year - Năm
+   */
+  const getTotalProductsSoldByYearStore = async (year: number): Promise<ApiResponse> => {
+    loadingProductsSold.value = true
+    try {
+      const response = await getTotalProductsSoldByYear(year)
+      console.log("📦 Total Products Sold By Year Response:", response)
+
+      let total = 0
+
+      if (response.success && response.data) {
+        const data = response.data
+        if (data && typeof data === "object") {
+          total = (data as any).totalQuantitySold || 0
+        }
+      }
+
+      console.log("📦 Total products sold by year (final):", total)
+      totalProductsSoldByYear.value = Number(total) || 0
+      console.log("✅ Store value after update:", totalProductsSoldByYear.value)
+      return response
+    } catch (error) {
+      console.error("❌ Get total products sold by year error:", error)
+      totalProductsSoldByYear.value = 0
+      throw error
+    } finally {
+      loadingProductsSold.value = false
+    }
+  }
+
+  return {
+    totalProductsSoldByMonth,
+    totalProductsSoldByYear,
+    loadingProductsSold,
+    getTotalProductsSoldByMonthStore,
+    getTotalProductsSoldByYearStore,
+  }
+})

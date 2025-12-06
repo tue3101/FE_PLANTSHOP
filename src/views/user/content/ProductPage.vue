@@ -16,9 +16,7 @@
   </div>
   <div v-if="isLoading" class="flex justify-center items-center min-h-[400px]">
     <div class="text-center">
-      <div
-        class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"
-      ></div>
+      <Loader class="w-12 h-12 animate-spin text-green-600 mb-4 mx-auto" />
       <p class="text-gray-600">Đang tải sản phẩm...</p>
     </div>
   </div>
@@ -76,6 +74,7 @@ import { useAsyncOperation } from "@/composables/useAsyncOperation"
 import DataPager from "@/components/common/DataPager.vue"
 import { useRouter } from "vue-router"
 import ProductList from "@/components/common/user/product/ProductList.vue"
+import { Loader } from "lucide-vue-next"
 
 const route = useRoute()
 const router = useRouter()

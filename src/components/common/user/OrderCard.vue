@@ -88,7 +88,7 @@
           <div>
             <p class="font-medium text-gray-800">{{ getProductName(detail.product) }}</p>
           </div>
-          <div class="flex flex-1 justify-center font-bold text-gray-800 font-semibold gap-100">
+          <div class="flex flex-1 justify-center font-semibold text-gray-800 gap-100">
             <p class="">
               {{ formatPrice(detail.price_at_order) }}
             </p>
@@ -235,38 +235,75 @@
   </div>
 </template>
 
-<script setup>
-import { defineProps, computed, onMounted, watch, ref } from "vue"
+<script setup lang="ts">
+import { computed, onMounted, watch, ref } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { useReviewStore } from "@/stores/reviews"
 import { usePaymentStore } from "@/stores/payments"
+import type { Order, Review, Payment, Product, User } from "@/types/store.types"
 
-const props = defineProps({
-  order: {
-    type: Object,
-    required: true,
-  },
-  showCancelButton: {
-    type: Boolean,
-    default: false,
-  },
-  // Prop để xác định có áp dụng filter hay không (mặc định là true cho OrderPage)
-  applyFilter: {
-    type: Boolean,
-    default: true,
-  },
+interface OrderDetail {
+  order_detail_id: number
+  product_id: number
+  product?: Product
+  quantity: number
+  price_at_order: number
+  sub_total: number
+  [key: string]: unknown
+}
+
+interface ExtendedOrder extends Order {
+  order_date?: string
+  order_details?: OrderDetail[]
+  shipping_name?: string
+  shipping_phone?: string
+  shipping_address?: string
+  shipping_fee?: number
+  total?: number
+  final_total?: number
+  discount_code?: string
+  discount_amount?: number
+  auto_discount_amount?: number
+  total_discount_amount?: number
+  deposit_required?: boolean
+  deposit?: {
+    paid: boolean
+    amount: number
+  }
+  payment?: Payment & {
+    method?: {
+      name: string
+    }
+    method_name?: string
+  }
+  payment_method?: string
+  user?: User
+  [key: string]: unknown
+}
+
+interface Props {
+  order: ExtendedOrder
+  showCancelButton?: boolean
+  applyFilter?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  showCancelButton: false,
+  applyFilter: true,
 })
 
-defineEmits(["cancel-order"])
+const emit = defineEmits<{
+  "cancel-order": [order: ExtendedOrder]
+}>()
 
 const authStore = useAuthStore()
 const reviewStore = useReviewStore()
 const paymentStore = usePaymentStore()
-const userReviews = ref([])
-const isLoadingReviews = ref(false)
-const paymentInfo = ref(null)
-const fullOrderInfo = ref(null)
-const isLoadingOrderInfo = ref(false)
+const userReviews = ref<Review[]>([])
+const isLoadingReviews = ref<boolean>(false)
+const paymentInfo = ref<Payment | null>(null)
+const fullOrderInfo = ref<ExtendedOrder | null>(null)
+const isLoadingOrderInfo = ref<boolean>(false)
 
 // Kiểm tra xem có nên hiển thị đơn hàng này không
 // Chỉ áp dụng filter khi applyFilter = true (dùng trong OrderPage)
@@ -291,15 +328,14 @@ const shouldDisplayOrder = computed(() => {
   return !isConfirmedAndDelivered && !isCancelled && !isShippingCancelled
 })
 
-// Load user reviews to check if all products are reviewed
-const loadUserReviews = async () => {
+const loadUserReviews = async (): Promise<void> => {
   const userId = authStore.userId
   if (!userId || props.order.shipping_status !== "DELIVERED") return
 
   isLoadingReviews.value = true
   try {
     await reviewStore.getReviewsByUserIdStore(userId)
-    userReviews.value = reviewStore.userReviews || []
+    userReviews.value = (reviewStore.userReviews as Review[]) || []
   } catch (error) {
     console.error("Error loading user reviews:", error)
     userReviews.value = []
@@ -308,25 +344,22 @@ const loadUserReviews = async () => {
   }
 }
 
-// Check if all order_details in order have been reviewed (based on order_detail_id)
-const hasAllProductsReviewed = computed(() => {
+const hasAllProductsReviewed = computed<boolean>(() => {
   if (!props.order.order_details || props.order.order_details.length === 0) {
     return false
   }
 
-  // If reviews haven't loaded yet, return false
   if (isLoadingReviews.value) {
     return false
   }
 
-  // Check if all order_details have reviews (each order_detail_id should have its own review)
   const allReviewed = props.order.order_details.every((detail) => {
     const orderDetailId = detail.order_detail_id
     if (!orderDetailId) return false
 
-    // Check if there's a review for this order_detail_id
     return userReviews.value.some((review) => {
-      const reviewOrderDetailId = review.order_detail_id || review.orderDetailId
+      const reviewOrderDetailId = (review as Review & { orderDetailId?: number }).order_detail_id || 
+                                   (review as Review & { orderDetailId?: number }).orderDetailId
       return reviewOrderDetailId && String(reviewOrderDetailId) === String(orderDetailId)
     })
   })
@@ -345,8 +378,7 @@ watch(
   { immediate: true }
 )
 
-// Load full order info nếu thiếu thông tin shipping
-const loadFullOrderInfo = async () => {
+const loadFullOrderInfo = async (): Promise<void> => {
   // Kiểm tra xem đã có đủ thông tin shipping chưa
   const hasShippingInfo =
     props.order.shipping_username ||
@@ -424,8 +456,7 @@ onMounted(() => {
   loadFullOrderInfo()
 })
 
-// Tính tổng số lượng sản phẩm
-const totalQuantity = computed(() => {
+const totalQuantity = computed<number>(() => {
   if (!props.order.order_details) return 0
   return props.order.order_details.reduce((sum, detail) => sum + (detail.quantity || 0), 0)
 })
@@ -438,8 +469,7 @@ const totalQuantity = computed(() => {
 //     }, 0)
 // })
 
-// Lấy special discount amount (discount từ mã giảm giá)
-const specialDiscountAmount = computed(() => {
+const specialDiscountAmount = computed<number>(() => {
   // Nếu có auto_discount_amount và discount_amount, thì discount_amount là special discount
   if (props.order.auto_discount_amount && props.order.discount_amount) {
     // discount_amount có thể là tổng hoặc chỉ special, cần kiểm tra
@@ -454,8 +484,7 @@ const specialDiscountAmount = computed(() => {
   return props.order.discount_amount || 0
 })
 
-// Tính phí ship dựa trên số lượng sản phẩm (nếu không có trong order)
-const shippingFee = computed(() => {
+const shippingFee = computed<number>(() => {
   // Ưu tiên lấy từ order object
   if (
     props.order.shipping_fee !== null &&
@@ -490,8 +519,7 @@ const shippingFee = computed(() => {
   return calculatedFee
 })
 
-// Tính số tiền còn lại phải thanh toán sau khi đặt cọc
-const remainingAmount = computed(() => {
+const remainingAmount = computed<number>(() => {
   if (!props.order.deposit_required || !props.order.deposit?.paid || !props.order.deposit?.amount) {
     return props.order.final_total || 0
   }
@@ -501,7 +529,7 @@ const remainingAmount = computed(() => {
   return remaining > 0 ? remaining : 0
 })
 
-const formatPrice = (price) => {
+const formatPrice = (price: number | string | null | undefined): string => {
   if (!price) return "0 ₫"
   const numPrice = typeof price === "string" ? parseFloat(price.replace(/[^\d.]/g, "")) : price
   return new Intl.NumberFormat("vi-VN", {
@@ -510,7 +538,7 @@ const formatPrice = (price) => {
   }).format(numPrice)
 }
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return ""
   const date = new Date(dateString)
   return date.toLocaleDateString("vi-VN", {
@@ -522,7 +550,7 @@ const formatDate = (dateString) => {
   })
 }
 
-const getStatusText = (status) => {
+const getStatusText = (status: string | null | undefined): string => {
   const statusMap = {
     PENDING: "Chờ xử lý",
     PENDING_CONFIRMATION: "Chờ xác nhận",
@@ -535,8 +563,7 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
-// Hàm chung để lấy class cho tất cả các loại status (order status và shipping status)
-const getStatusClass = (status) => {
+const getStatusClass = (status: string | null | undefined): string => {
   if (!status) return "bg-gray-100 text-gray-800"
 
   const classMap = {
@@ -548,7 +575,7 @@ const getStatusClass = (status) => {
   }
   return classMap[status] || "bg-gray-100 text-gray-800"
 }
-const getShippingStatusClass = (shipping_status) => {
+const getShippingStatusClass = (shipping_status: string | null | undefined): string => {
   if (!shipping_status) return "bg-gray-100 text-gray-800"
 
   const classMap = {
@@ -560,7 +587,7 @@ const getShippingStatusClass = (shipping_status) => {
   }
   return classMap[shipping_status] || "bg-gray-100 text-gray-800"
 }
-const getPaymentStatusClass = (status) => {
+const getPaymentStatusClass = (status: string | null | undefined): string => {
   if (!status) return "bg-gray-100 text-gray-800"
 
   const classMap = {
@@ -571,8 +598,7 @@ const getPaymentStatusClass = (status) => {
   return classMap[status] || "bg-gray-100 text-gray-800"
 }
 
-// Lấy tên phương thức thanh toán từ order
-const getPaymentMethodName = () => {
+const getPaymentMethodName = (): string => {
   // Ưu tiên lấy từ order.payment (đã được load từ getOrdersByUserIdStore)
   if (props.order.payment?.method?.name) {
     return props.order.payment.method.name
@@ -590,8 +616,7 @@ const getPaymentMethodName = () => {
   return "COD" // Default
 }
 
-// Lấy trạng thái thanh toán
-const getPaymentStatusText = (order) => {
+const getPaymentStatusText = (order: ExtendedOrder): string => {
   // Ưu tiên lấy từ payment object
   if (order.payment?.status) {
     const statusMap = {
@@ -613,8 +638,7 @@ const getPaymentStatusText = (order) => {
   return "Chưa xác định"
 }
 
-// Lấy trạng thái giao hàng
-const getShippingStatusText = (shippingStatus) => {
+const getShippingStatusText = (shippingStatus: string | null | undefined): string => {
   if (!shippingStatus) return "Chưa xác định"
   const statusMap = {
     PREPARING_ORDER: "Đang chuẩn bị đơn",
@@ -626,8 +650,7 @@ const getShippingStatusText = (shippingStatus) => {
   return statusMap[shippingStatus] || shippingStatus
 }
 
-// Load payment info nếu chưa có trong order
-const loadPaymentInfo = async () => {
+const loadPaymentInfo = async (): Promise<void> => {
   // Ưu tiên sử dụng payment info từ order object (đã được load từ getOrdersByUserIdStore)
   if (props.order.payment) {
     paymentInfo.value = props.order.payment
@@ -662,11 +685,11 @@ const loadPaymentInfo = async () => {
   }
 }
 
-const getProductName = (product) => {
+const getProductName = (product: Product | null | undefined): string => {
   return product?.product_name || "Không có tên"
 }
 
-const getProductImage = (product) => {
+const getProductImage = (product: Product | null | undefined): string => {
   const imageUrl = product?.img_url
   if (!imageUrl || imageUrl.trim() === "") {
     return "/img/footer.png"
@@ -674,30 +697,26 @@ const getProductImage = (product) => {
   return imageUrl
 }
 
-const handleImageError = (event) => {
-  if (!event.target.src.includes("footer.png")) {
-    event.target.src = "/img/footer.png"
+const handleImageError = (event: Event): void => {
+  const target = event.target as HTMLImageElement
+  if (!target.src.includes("footer.png")) {
+    target.src = "/img/footer.png"
   }
 }
 
-// Lấy thông tin giao hàng từ order prop (đã được load từ getOrdersByUserIdStore)
-// Sử dụng fullOrderInfo nếu đã load, nếu không thì dùng props.order
-const getShippingUsername = () => {
+const getShippingUsername = (): string => {
   const order = fullOrderInfo.value || props.order
-  const username = order.shipping_name
-  return username
+  return order.shipping_name || ""
 }
 
-const getShippingPhone = () => {
+const getShippingPhone = (): string => {
   const order = fullOrderInfo.value || props.order
-  const phone = order.shipping_phone
-  return phone
+  return order.shipping_phone || ""
 }
 
-const getShippingAddress = () => {
+const getShippingAddress = (): string => {
   const order = fullOrderInfo.value || props.order
-  const address = order.shipping_address
-  return address
+  return order.shipping_address || ""
 }
 
 // Handle deposit payment

@@ -1,78 +1,60 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+  <form
+    @submit.prevent="handleSubmit"
+    class="max-w-md mx-auto bg-background p-6 rounded-lg shadow-md"
+  >
     <div class="mb-4">
-      <label for="username" class="block text-gray-700 font-bold mb-2">Username</label>
-      <input
-        v-model="localFormData.username"
-        type="text"
-        id="username"
-        placeholder="cobala1408"
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      <Label for="username">Username</Label>
+      <Input v-model="localFormData.username" type="text" id="username" placeholder="cobala1408" />
     </div>
     <div class="mb-4">
-      <label for="role" class="block text-gray-700 font-bold mb-2">Role</label>
-      <input
+      <Label for="role">Role</Label>
+      <Input
         v-model="localFormData.role"
         type="text"
         id="role"
         :readonly="isUserRole"
         :disabled="isUserRole"
-        :class="[
-          'w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500',
-          isUserRole ? 'bg-gray-100 cursor-not-allowed' : '',
-        ]"
+        :class="isUserRole ? 'bg-muted cursor-not-allowed' : ''"
       />
     </div>
     <div class="mb-4">
-      <label for="email" class="block text-gray-700 font-bold mb-2">Email</label>
-      <input
+      <Label for="email">Email</Label>
+      <Input
         v-model="localFormData.email"
         type="email"
         id="email"
         placeholder="cobala1408@gmail.com"
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
     <div class="mb-6">
-      <label for="phone_number" class="block text-gray-700 font-bold mb-2">Phone</label>
-      <input
+      <Label for="phone_number">Phone</Label>
+      <Input
         v-model="localFormData.phone_number"
         type="tel"
         id="phone_number"
         placeholder="+84xxxxxxxxx"
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
     <div class="mb-6">
-      <label for="address" class="block text-gray-700 font-bold mb-2">Địa chỉ</label>
-      <textarea
+      <Label for="address">Địa chỉ</Label>
+      <Textarea
         v-model="localFormData.address"
         id="address"
         rows="3"
         placeholder="Nhập địa chỉ của bạn"
-        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      ></textarea>
+      />
     </div>
-    <div v-if="errorMessage" class="mb-4 text-red-600 text-sm text-center">
-      {{ errorMessage }}
-    </div>
+    <Alert v-if="errorMessage" variant="destructive" class="mb-4">
+      <AlertDescription>{{ errorMessage }}</AlertDescription>
+    </Alert>
     <div class="flex space-x-4">
-      <button
-        type="submit"
-        :disabled="isLoading"
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
+      <Button type="submit" :disabled="isLoading">
         {{ isLoading ? "ĐANG XỬ LÝ..." : "Cập Nhật" }}
-      </button>
-      <button
-        type="button"
-        @click="openChangeModal"
-        :disabled="isLoading"
-        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
+      </Button>
+      <Button type="button" variant="outline" @click="openChangeModal" :disabled="isLoading">
         Đổi Mật Khẩu
-      </button>
+      </Button>
     </div>
   </form>
   <ModalCommon
@@ -91,7 +73,7 @@
         <router-link
           to="/forgot-password"
           @click="closeChangeModal"
-          class="text-blue-600 hover:text-blue-800 text-sm underline"
+          class="text-primary hover:text-primary/80 text-sm underline"
         >
           Quên mật khẩu?
         </router-link>
@@ -110,10 +92,15 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed } from "vue"
 import ModalCommon from "@/components/common/admin/ModalCommon.vue"
 import DeleteModal from "@/components/common/admin/DeleteModal.vue"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const showChangeModal = ref(false)
 const isChangingPassword = ref(false)
@@ -148,45 +135,49 @@ const passwordFields = computed(() => [
   },
 ])
 
-const openChangeModal = () => {
+const openChangeModal = (): void => {
   showChangeModal.value = true
   passwordError.value = ""
 }
 
-const closeChangeModal = () => {
+const closeChangeModal = (): void => {
   showChangeModal.value = false
   passwordError.value = ""
 }
 
-const props = defineProps({
-  formData: {
-    type: Object,
-    required: true,
-    default: () => ({
-      username: "",
-      role: "",
-      email: "",
-      phone_number: "",
-      address: "",
-    }),
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  errorMessage: {
-    type: String,
-    default: "",
-  },
-  updateSuccess: {
-    type: Boolean,
-    default: false,
-  },
-})
+const props = withDefaults(
+  defineProps<{
+    formData: {
+      username: string
+      role: string
+      email: string
+      phone_number: string
+      address: string
+    }
+    isLoading?: boolean
+    errorMessage?: string
+    updateSuccess?: boolean
+  }>(),
+  {
+    isLoading: false,
+    errorMessage: "",
+    updateSuccess: false,
+  }
+)
 
-const emit = defineEmits(["update", "change-password", "update-success-reset"])
+const emit = defineEmits<{
+  update: [data: FormData]
+  "change-password": [data: { oldPassword: string; newPassword: string }]
+  "update-success-reset": []
+}>()
 
-const localFormData = ref({ ...props.formData })
+const localFormData = ref<{
+  username: string
+  role: string
+  email: string
+  phone_number: string
+  address: string
+}>({ ...props.formData })
 
 const isUserRole = computed(() => {
   const role = localFormData.value?.role || ""
@@ -237,16 +228,22 @@ watch(
   }
 )
 
-const handleSubmit = () => {
+const handleSubmit = (): void => {
   // Gửi dữ liệu với địa chỉ từ input
-  const submitData = {
+  const submitData: {
+    username: string
+    role: string
+    email: string
+    phone_number: string
+    address: string
+  } = {
     ...localFormData.value,
     address: localFormData.value.address || "",
   }
   emit("update", submitData)
 }
 
-const handleChangePassword = (passwordData) => {
+const handleChangePassword = (passwordData: Record<string, string>): void => {
   // Validate password
   if (passwordData.newPassword !== passwordData.confirmPassword) {
     passwordError.value = "Mật khẩu mới và xác nhận mật khẩu không khớp!"
@@ -267,7 +264,7 @@ const handleChangePassword = (passwordData) => {
 }
 
 // Đóng modal cập nhật thành công
-const handleCloseUpdateSuccessModal = () => {
+const handleCloseUpdateSuccessModal = (): void => {
   showUpdateSuccessModal.value = false
   // Emit event để parent component reset updateSuccess
   emit("update-success-reset")

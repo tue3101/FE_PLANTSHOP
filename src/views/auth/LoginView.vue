@@ -7,49 +7,64 @@
       backgroundPosition: 'center',
     }"
   >
-    <div class="flex w-[700px] h-[350px] shadow-lg rounded-2xl overflow-hidden">
-      <div class="flex-1 bg-green-500 flex flex-col items-center justify-center p-6">
-        <h2 class="text-white text-xl font-bold mb-2">ĐĂNG KÝ TÀI KHOẢN</h2>
-        <p class="text-white text-sm mb-4">BẠN CHƯA CÓ TÀI KHOẢN ? TẠO MỚI!</p>
-        <router-link
-          to="/register"
-          class="border border-white text-white px-6 py-1 rounded mb-2 hover:bg-green-700 hover:cursor-pointer transition-colors block text-center"
-          >ĐĂNG KÝ</router-link
-        >
-      </div>
+    <div class="flex w-[700px] h-auto shadow-lg rounded-2xl overflow-hidden">
+      <Card
+        class="flex-1 bg-primary flex flex-col items-center justify-center p-6 rounded-none rounded-l-2xl"
+      >
+        <CardContent class="flex flex-col items-center p-0">
+          <h2 class="text-primary-foreground text-xl font-bold mb-2">ĐĂNG KÝ TÀI KHOẢN</h2>
+          <p class="text-primary-foreground/90 text-sm mb-4">BẠN CHƯA CÓ TÀI KHOẢN ? TẠO MỚI!</p>
+          <Button as-child variant="outline">
+            <router-link to="/register">ĐĂNG KÝ</router-link>
+          </Button>
+        </CardContent>
+      </Card>
 
-      <div class="flex-1 bg-white p-6 relative">
-        <h2 class="text-black text-xl font-bold mb-4 text-center">ĐĂNG NHẬP</h2>
-
-        <LoginForm
-          :isLoading="isLoading"
-          :errorMessage="errorMessage"
-          @login="handleLogin"
-          @google-login="handleGoogleLogin"
-        />
-      </div>
+      <Card class="flex-1 bg-background p-6 rounded-none rounded-r-2xl">
+        <CardHeader>
+          <CardTitle class="text-center">ĐĂNG NHẬP</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LoginForm
+            :isLoading="isLoading"
+            :errorMessage="errorMessage"
+            @login="handleLogin"
+            @google-login="handleGoogleLogin"
+          />
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useRouter } from "vue-router"
-import { useAuthStore } from "@/stores/auth"
-import { useAsyncOperation } from "@/composables/useAsyncOperation"
-import LoginForm from "@/components/auth/LoginForm.vue"
+import { useAuthStore } from "../../stores/auth"
+import { useAsyncOperation } from "../../composables/useAsyncOperation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import LoginForm from "../../components/auth/LoginForm.vue"
+import { toastSuccess, toastError } from "@/utils/toast"
+
+interface LoginCredentials {
+  email: string
+  password: string
+}
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const { isLoading, errorMessage, executeAsync } = useAsyncOperation()
 
-const handleLogin = async (credentials) => {
+const handleLogin = async (credentials: LoginCredentials): Promise<void> => {
   await executeAsync(
     async () => {
       await authStore.loginUsers(credentials.email, credentials.password)
 
       const role = authStore.userRole
       console.log("User role after login:", role)
+
+      toastSuccess("Đăng nhập thành công!")
 
       if (role === "ADMIN") {
         router.push("/dashboard")
@@ -59,16 +74,18 @@ const handleLogin = async (credentials) => {
     },
     {
       defaultErrorMessage: "Đăng nhập thất bại!",
+      onError: (error) => {
+        const errorMessage = error?.response?.data?.message || "Đăng nhập thất bại!"
+        toastError(errorMessage)
+      },
     }
   )
 }
 
-// Xử lý Google login gửi code cho GoogleCallbackView
-const handleGoogleLogin = async () => {
+const handleGoogleLogin = async (): Promise<void> => {
   try {
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-    // Kiểm tra Client ID
     if (
       !GOOGLE_CLIENT_ID ||
       GOOGLE_CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID" ||
@@ -80,32 +97,25 @@ const handleGoogleLogin = async () => {
       return
     }
 
-    // `${window.location.origin} => tự động lấy domain hiện tại
-    //URI gg gửi code về BE để xử lý
     const REDIRECT_URI = `${window.location.origin}/auth/google/callback`
-    // const REDIRECT_URI = router.push('/auth/google/callback')
 
-    // Tạo URL cho Google OAuth với các tham số đúng format
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       redirect_uri: REDIRECT_URI,
       response_type: "code",
       scope: "openid email profile",
-      access_type: "offline", //be lấy refesh khi fe offline
-      prompt: "consent", //hộp thoại xác nhận lại khi từng login
+      access_type: "offline",
+      prompt: "consent",
     })
 
-    //url chọn email login
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
 
-    // Lưu return URL vào sessionStorage để redirect sau khi login
-    // sessionStorage.setItem('returnUrl', router.currentRoute.value.fullPath)
-
-    // Redirect đến Google OAuth chọn email xác nhận
     window.location.href = authUrl
   } catch (error) {
     console.error("Google login error:", error)
-    alert("Có lỗi xảy ra khi đăng nhập Google: " + error.message)
+    const errorMessage =
+      error instanceof Error ? error.message : "Có lỗi xảy ra khi đăng nhập Google"
+    alert(errorMessage)
   }
 }
 </script>

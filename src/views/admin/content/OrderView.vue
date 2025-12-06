@@ -17,9 +17,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex justify-center items-center py-12">
       <div class="text-center">
-        <div
-          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
-        ></div>
+        <Loader class="w-8 h-8 animate-spin text-gray-900 mx-auto" />
         <p class="mt-4 text-gray-600">Đang tải đơn hàng...</p>
       </div>
     </div>
@@ -329,7 +327,8 @@ import { ref, computed, onMounted } from "vue"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
 import { useOrderStore } from "@/stores/orders"
 import { usePaymentStore } from "@/stores/payments"
-import { X } from "lucide-vue-next"
+import { X, Loader } from "lucide-vue-next"
+import { toastSuccess, toastError } from "@/utils/toast"
 const PAGE_SIZE = 8
 const currentPage = ref(1)
 const searchQuery = ref("")
@@ -352,16 +351,53 @@ const shippingStatusOptions = [
   { value: "CANCELLED", label: "Giao thất bại" },
 ]
 
+// Data refs để lưu dữ liệu đã map
+const dataOrders = ref([])
+
+// Function để refresh và map dữ liệu từ store
+const refreshOrdersData = async () => {
+  await orderStore.getAllOrdersStore()
+  await paymentStore.getAllPaymentsStore()
+
+  const list = orderStore.orders || []
+  dataOrders.value = list.map((order) => ({
+    order_id: order.order_id,
+    customer: getCustomerName(order),
+    orderDate: order.created_at || order.order_date,
+    status: order.status,
+    shipping_status: order.shipping_status,
+    payment_status: getPaymentStatus(order),
+    final_total: order.final_total || order.total || 0,
+    total: order.total || 0,
+    discount: order.discount || 0,
+    discount_amount: order.discount_amount || 0,
+    auto_discount_amount: order.auto_discount_amount || 0,
+    total_discount_amount: order.total_discount_amount || 0,
+    discount_code: order.discount_code || null,
+    shipping_fee: order.shipping_fee || 0,
+    created_at: order.created_at || order.order_date,
+    user: order.user,
+    payment: order.payment,
+    order_details: order.order_details || [],
+    shipping_name: order.shipping_name,
+    shipping_phone: order.shipping_phone,
+    shipping_address: order.shipping_address,
+    note: order.note || order.shipping_note,
+    deposit_required: order.deposit_required || false,
+    deposit: order.deposit || null,
+  }))
+}
+
 // Computed để filter orders (chỉ filter theo search query, status filter được xử lý bởi DataPager)
 const filteredOrders = computed(() => {
-  let orders = orderStore.orders || []
+  let orders = dataOrders.value || []
 
   // Filter theo search query
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
     orders = orders.filter((order) => {
       const orderId = String(order.order_id || "").toLowerCase()
-      const customerName = getCustomerName(order).toLowerCase()
+      const customerName = (order.customer || "").toLowerCase()
       const customerEmail = getCustomerEmail(order).toLowerCase()
       return (
         orderId.includes(query) || customerName.includes(query) || customerEmail.includes(query)
@@ -376,7 +412,7 @@ const filteredOrders = computed(() => {
 const loadOrders = async () => {
   await executeAsync(
     async () => {
-      await Promise.all([orderStore.getAllOrdersStore(), paymentStore.getAllPaymentsStore()])
+      await refreshOrdersData()
     },
     {
       defaultErrorMessage: "Không thể tải danh sách đơn hàng!",
@@ -756,11 +792,13 @@ const handleUpdateStatus = async () => {
     }
 
     closeUpdateStatusModal()
-    await loadOrders() // Reload orders and payments
+    await refreshOrdersData() // Reload và map lại dữ liệu
+    toastSuccess("Cập nhật trạng thái thành công!")
     showUpdateStatusSuccessModal.value = true
   } catch (error) {
     updateStatusError.value =
       error.response?.data?.message || error.message || "Không thể cập nhật trạng thái!"
+    toastError(error.response?.data?.message || error.message || "Không thể cập nhật trạng thái!")
   } finally {
     isUpdatingStatus.value = false
   }

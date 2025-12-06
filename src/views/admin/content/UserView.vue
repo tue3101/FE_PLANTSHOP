@@ -108,25 +108,6 @@
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
-    <DeleteModal
-      :showModal="showDeleteSuccessModal"
-      mode="delete-success"
-      @close="handleDeleteSuccessClose"
-    />
-
-    <!-- Update Success Modal -->
-    <DeleteModal
-      :showModal="showUpdateSuccessModal"
-      mode="update-success"
-      @close="handleUpdateSuccessClose"
-    />
-
-    <!-- Restore Success Modal -->
-    <DeleteModal
-      :showModal="showRestoreSuccessModal"
-      mode="restore-success"
-      @close="handleRestoreSuccessClose"
-    />
   </div>
 </template>
 <script setup>
@@ -144,6 +125,7 @@ import { useRouter } from "vue-router"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
 import { useUserStore } from "@/stores/user"
 import { useAuthStore } from "@/stores/auth"
+import { toastSuccess, toastError } from "@/utils/toast"
 
 //dataPager
 const PAGE_SIZE = 5
@@ -335,12 +317,14 @@ const handleUpdateUser = async (userData) => {
       await refreshUsersData()
       closeUpdateModal()
       updateError.value = ""
+      toastSuccess("Cập nhật người dùng thành công!")
       showUpdateSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể cập nhật người dùng!",
       onError: (error) => {
         updateError.value = error.response?.data?.message
+        toastError(error.response?.data?.message || "Không thể cập nhật người dùng!")
       },
     }
   )
@@ -415,12 +399,14 @@ async function handleRestore(item) {
     async () => {
       await userStore.restoreUserStore(userId)
       await refreshUsersData()
+      toastSuccess("Khôi phục người dùng thành công!")
       showRestoreSuccessModal.value = true
     },
     {
       defaultErrorMessage: "Không thể khôi phục người dùng!",
       onError: (error) => {
         const errorMessage = error.response?.data?.message
+        toastError(errorMessage || "Không thể khôi phục người dùng!")
         console.error("Restore error:", errorMessage || error)
       },
     }

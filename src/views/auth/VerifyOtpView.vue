@@ -70,9 +70,7 @@
         </div>
 
         <div v-if="isLoading" class="text-center py-8">
-          <div
-            class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"
-          ></div>
+          <Loader class="w-8 h-8 animate-spin text-gray-900 mx-auto" />
           <p class="mt-4 text-gray-600">Đang xử lý...</p>
         </div>
       </div>
@@ -85,6 +83,7 @@ import { ref, onMounted, onUnmounted, nextTick } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useAuthStore } from "@/stores/auth"
 import { useAsyncOperation } from "@/composables/useAsyncOperation"
+import { Loader } from "lucide-vue-next"
 
 const router = useRouter()
 const route = useRoute()

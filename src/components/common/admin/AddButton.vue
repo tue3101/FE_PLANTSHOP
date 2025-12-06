@@ -1,21 +1,19 @@
 <template>
-  <button
-    @click="$emit('click')"
-    class="ml-4 text-3xl text-black border-2 border-black rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-200 hover:cursor-pointer transition-colors duration-200"
-    :title="title"
-  >
+  <Button @click="$emit('click')" :title="title">
     <Plus :size="24" />
-  </button>
+    <span>Thêm mới</span>
+  </Button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Plus } from "lucide-vue-next"
+import { Button } from "@/components/ui/button"
 
-defineProps({
-  title: {
-    type: String,
-  },
-})
+defineProps<{
+  title?: string
+}>()
 
-defineEmits(["click"])
+defineEmits<{
+  click: []
+}>()
 </script>

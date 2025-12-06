@@ -1,30 +1,19 @@
 <template>
   <div ref="searchContainer" class="relative w-full">
     <div class="relative">
-      <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-      <input
+      <Search
+        class="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5"
+      />
+      <Input
         type="text"
-        :value="modelValue"
+        :model-value="modelValue"
         :placeholder="placeholder"
         :class="computedInputClass"
-        @input="handleInput"
+        @update:model-value="handleInput"
         @keyup.enter="handleEnter"
         @focus="handleFocus"
       />
     </div>
-
-    <!-- Category Dropdown -->
-    <!-- <div v-if="showCategoryFilter && mode === 'user'" class="mt-2">
-            <select v-model="selectedCategory"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer text-sm"
-                @change="handleCategoryChange">
-                <option value="">Tất cả danh mục</option>
-                <option v-for="category in categories" :key="category.category_id || category.id"
-                    :value="category.category_id || category.id">
-                    {{ category.category_name || category.name }}
-                </option>
-            </select>
-        </div> -->
 
     <!-- Search Suggestions  -->
     <div
@@ -35,13 +24,13 @@
         modelValue.trim() &&
         isSuggestionsVisible
       "
-      class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+      class="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
     >
       <div
         v-for="suggestion in suggestions"
         :key="suggestion.product_id"
         @click.stop="selectSuggestion(suggestion)"
-        class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+        class="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-3"
       >
         <img
           :src="getProductImage(suggestion)"
@@ -50,77 +39,69 @@
           @error="handleImageError($event)"
         />
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-800">{{ getProductName(suggestion) }}</p>
-          <p class="text-xs text-gray-500">{{ formatPrice(suggestion.price) }}</p>
+          <p class="text-sm font-medium">{{ getProductName(suggestion) }}</p>
+          <p class="text-xs text-muted-foreground">{{ formatPrice(suggestion.price) }}</p>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from "vue"
 import { useRouter } from "vue-router"
 import { Search } from "lucide-vue-next"
 import { useProductStore } from "@/stores/products"
+import { Input } from "@/components/ui/input"
+import type { Product } from "@/types/api.types"
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: "",
-  },
-  mode: {
-    type: String,
-    default: "user", // 'user' hoặc 'admin'
-    validator: (value) => ["user", "admin"].includes(value),
-  },
-  placeholder: {
-    type: String,
-    default: "Nhập từ khóa tìm kiếm...",
-  },
-  inputClass: {
-    type: String,
-    default:
-      "w-full pl-10 pr-4 py-2 bg-amber-50 border border-black rounded-full focus:outline-none focus:ring-1 focus:ring-white",
-  },
-  useHeaderStyle: {
-    type: Boolean,
-    default: false,
-  },
-  showCategoryFilter: {
-    type: Boolean,
-    default: false,
-  },
-  showSuggestions: {
-    type: Boolean,
-    default: false,
-  },
-  initialCategory: {
-    type: [String, Number],
-    default: "",
-  },
+type Props = {
+  modelValue?: string
+  mode?: "user" | "admin"
+  placeholder?: string
+  inputClass?: string
+  useHeaderStyle?: boolean
+  showCategoryFilter?: boolean
+  showSuggestions?: boolean
+  initialCategory?: string | number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: "",
+  mode: "user",
+  placeholder: "Nhập từ khóa tìm kiếm...",
+  inputClass:
+    "w-full pl-10 pr-4 py-2 rounded-full",
+  useHeaderStyle: false,
+  showCategoryFilter: false,
+  showSuggestions: false,
+  initialCategory: "",
 })
 
-const emit = defineEmits(["update:modelValue", "search", "category-change"])
+const emit = defineEmits<{
+  "update:modelValue": [value: string]
+  search: [query: string]
+  "category-change": [category: string | number]
+}>()
 
 const router = useRouter()
 const productStore = useProductStore()
 
-const selectedCategory = ref(props.initialCategory || "")
-const suggestions = ref([])
-const isSuggestionsVisible = ref(true)
-const searchContainer = ref(null)
+const selectedCategory = ref<string | number>(props.initialCategory || "")
+const suggestions = ref<Product[]>([])
+const isSuggestionsVisible = ref<boolean>(true)
+const searchContainer = ref<HTMLElement | null>(null)
 
 // Computed input class
 const computedInputClass = computed(() => {
   if (props.useHeaderStyle) {
-    return "w-full pl-10 pr-4 py-2 bg-amber-50 border border-black rounded-full focus:outline-none focus:ring-1 focus:ring-white"
+    return "w-full pl-10 pr-4 py-2 rounded-full"
   }
   return props.inputClass
 })
 
 // Load categories
-const loadCategories = async () => {
+const loadCategories = async (): Promise<void> => {
   try {
     if (!productStore.categories || productStore.categories.length === 0) {
       await productStore.getCategories()
@@ -130,19 +111,13 @@ const loadCategories = async () => {
   }
 }
 
-// Computed categories
-// const categories = computed(() => {
-//     return productStore.categories || []
-// })
-
 // Computed products for suggestions
 const products = computed(() => {
   return productStore.products || []
 })
 
 // Handle input change
-const handleInput = (event) => {
-  const value = event.target.value
+const handleInput = (value: string): void => {
   emit("update:modelValue", value)
 
   if (props.mode === "user" && props.showSuggestions && value.trim()) {
@@ -155,11 +130,11 @@ const handleInput = (event) => {
 }
 
 // Handle focus
-const handleFocus = () => {
+const handleFocus = (): void => {
   if (
     props.mode === "user" &&
     props.showSuggestions &&
-    props.modelValue.trim() &&
+    props.modelValue?.trim() &&
     suggestions.value.length > 0
   ) {
     isSuggestionsVisible.value = true
@@ -167,17 +142,17 @@ const handleFocus = () => {
 }
 
 // Handle Enter key
-const handleEnter = () => {
+const handleEnter = (): void => {
   if (props.mode === "user") {
     handleSearch()
   } else {
-    emit("search", props.modelValue)
+    emit("search", props.modelValue || "")
   }
 }
 
 // Update suggestions based on search query
-const updateSuggestions = () => {
-  const query = props.modelValue.toLowerCase().trim()
+const updateSuggestions = (): void => {
+  const query = (props.modelValue || "").toLowerCase().trim()
   if (!query) {
     suggestions.value = []
     return
@@ -194,19 +169,19 @@ const updateSuggestions = () => {
 }
 
 // Handle search (chỉ cho user mode)
-const handleSearch = () => {
+const handleSearch = (): void => {
   if (props.mode !== "user") return
 
-  const query = props.modelValue.trim()
+  const query = (props.modelValue || "").trim()
   const category = selectedCategory.value
 
   // Build query params
-  const queryParams = {}
+  const queryParams: Record<string, string> = {}
   if (query) {
     queryParams.search = query
   }
   if (category) {
-    queryParams.category = category
+    queryParams.category = String(category)
   }
 
   // Navigate to product page with search params
@@ -220,17 +195,8 @@ const handleSearch = () => {
   isSuggestionsVisible.value = false
 }
 
-// Handle category change
-// const handleCategoryChange = () => {
-//     emit('category-change', selectedCategory.value)
-//     // If category is selected, navigate immediately (chỉ cho user mode)
-//     if (props.mode === 'user' && selectedCategory.value) {
-//         handleSearch()
-//     }
-// }
-
 // Select suggestion
-const selectSuggestion = (product) => {
+const selectSuggestion = (product: Product): void => {
   const productId = product.product_id
   if (!productId) {
     console.error("Product ID not found:", product)
@@ -244,36 +210,38 @@ const selectSuggestion = (product) => {
 }
 
 // Handle click outside
-const handleClickOutside = (event) => {
-  if (searchContainer.value && !searchContainer.value.contains(event.target)) {
+const handleClickOutside = (event: MouseEvent): void => {
+  if (searchContainer.value && !searchContainer.value.contains(event.target as Node)) {
     isSuggestionsVisible.value = false
   }
 }
 
 // Helper functions
-const getProductImage = (product) => {
+const getProductImage = (product: Product): string => {
   if (!product) return "/img/footer.png"
   if (product.img_url) return product.img_url
   if (product.images && product.images.length > 0) return product.images[0]
   return "/img/footer.png"
 }
 
-const getProductName = (product) => {
+const getProductName = (product: Product): string => {
   if (!product) return "Sản phẩm không xác định"
-  return product.product_name || product.name || "Sản phẩm"
+  return product.product_name || "Sản phẩm"
 }
 
-const formatPrice = (price) => {
+const formatPrice = (price: number | string | undefined): string => {
+  const numPrice = typeof price === "string" ? parseFloat(price) || 0 : price || 0
   if (!price) return "0 ₫"
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-  }).format(price)
+  }).format(numPrice)
 }
 
-const handleImageError = (event) => {
-  if (!event.target.src.includes("footer.png")) {
-    event.target.src = "/img/footer.png"
+const handleImageError = (event: Event): void => {
+  const target = event.target as HTMLImageElement
+  if (!target.src.includes("footer.png")) {
+    target.src = "/img/footer.png"
   }
 }
 
@@ -283,10 +251,10 @@ watch(
   (newQuery) => {
     if (props.mode === "user") {
       if (newQuery.search) {
-        emit("update:modelValue", newQuery.search)
+        emit("update:modelValue", String(newQuery.search))
       }
       if (newQuery.category) {
-        selectedCategory.value = newQuery.category
+        selectedCategory.value = String(newQuery.category)
       }
     }
   },

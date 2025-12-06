@@ -1,9 +1,8 @@
-<script setup></script>
+<script setup lang="ts">
+import { Toaster } from "@/components/ui/sonner"
+</script>
 
 <template>
-  <div>
-    <div>
-      <router-view />
-    </div>
-  </div>
+  <router-view />
+  <Toaster richColors position="top-right" />
 </template>

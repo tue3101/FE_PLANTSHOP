@@ -1,122 +1,111 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="showModal"
-      class="fixed inset-0 flex items-center justify-center z-50"
-      @click.self="handleCancel"
+  <AlertDialog :open="showModal" @update:open="handleOpenChange">
+    <AlertDialogContent
+      ref="modalRef"
+      class="w-96 max-w-[90vw]"
+      :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     >
-      <div
-        ref="modalRef"
-        class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-[90vw]"
-        :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
-      >
-        <!-- Header có thể kéo -->
-        <div
-          class="flex justify-between items-center mb-4 cursor-move select-none"
-          @mousedown="handleMouseDown"
-        >
-          <h3 class="text-lg font-semibold" :class="titleClass">
-            {{ computedTitle }}
-          </h3>
-          <button
-            @click="handleClose"
-            class="text-gray-500 hover:text-gray-700 cursor-pointer no-drag"
-          >
-            <X :size="24" />
-          </button>
-        </div>
+      <AlertDialogHeader @mousedown="handleMouseDown">
+        <AlertDialogTitle :class="titleClass">
+          {{ computedTitle }}
+        </AlertDialogTitle>
+      </AlertDialogHeader>
 
-        <!-- Confirm Mode -->
-        <template v-if="mode === 'confirm'">
-          <div class="mb-6">
-            <p class="text-gray-700">{{ message || "Bạn có chắc chắn muốn xóa không?" }}</p>
-          </div>
-          <div class="flex justify-end space-x-4">
-            <button
-              @click="handleCancel"
-              class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 transition-colors cursor-pointer"
-            >
-              Hủy
-            </button>
-            <button
-              @click="handleConfirm"
-              class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors cursor-pointer"
-            >
-              Xóa
-            </button>
-          </div>
-        </template>
+      <!-- Confirm Mode -->
+      <template v-if="mode === 'confirm'">
+        <AlertDialogDescription class="mb-6">
+          {{ message || "Bạn có chắc chắn muốn xóa không?" }}
+        </AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="handleCancel">Hủy</AlertDialogCancel>
+          <AlertDialogAction @click="handleConfirm" class="bg-red-500 hover:bg-red-600 text-white">
+            <Trash />
+            Xóa
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </template>
 
-        <!-- Success Modes -->
-        <template v-else>
-          <div class="mb-6">
-            <div class="flex items-center justify-center mb-4">
-              <div :class="iconContainerClass" class="rounded-full p-3">
-                <component :is="iconComponent" :size="48" :class="iconClass" />
-              </div>
+      <!-- Success Modes -->
+      <template v-else>
+        <div class="mb-6">
+          <div class="flex items-center justify-center mb-4">
+            <div :class="iconContainerClass" class="rounded-full p-3">
+              <component :is="iconComponent" :size="48" :class="iconClass" />
             </div>
-            <p class="text-center text-gray-700">{{ message || defaultMessage }}</p>
           </div>
-          <div class="flex justify-end">
-            <button
-              @click="handleClose"
-              :class="buttonClass"
-              class="px-4 py-2 text-white rounded transition-colors cursor-pointer"
-            >
-              Đóng
-            </button>
-          </div>
-        </template>
-      </div>
-    </div>
-  </Teleport>
+          <AlertDialogDescription class="text-center">
+            {{ message || defaultMessage }}
+          </AlertDialogDescription>
+        </div>
+        <AlertDialogFooter>
+          <Button @click="handleClose" :class="buttonClass" class="text-white"> Đóng </Button>
+        </AlertDialogFooter>
+      </template>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue"
-import { CheckCircle2, XCircle, Info, AlertCircle, X } from "lucide-vue-next"
+import { CheckCircle2, XCircle, Info, AlertCircle, X, Trash } from "lucide-vue-next"
 import { useDragModal } from "@/composables/useDragModal"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 
-const props = defineProps({
-  showModal: {
-    type: Boolean,
-    required: true,
-  },
-  mode: {
-    type: String,
-    default: "confirm",
-    validator: (value) =>
-      [
-        "confirm",
-        "success",
-        "add-success",
-        "update-success",
-        "delete-success",
-        "restore-success",
-        "error",
-        "info",
-      ].includes(value),
-  },
-  title: {
-    type: String,
-    default: "",
-  },
-  message: {
-    type: String,
-    default: "",
-  },
-})
+type ModalMode =
+  | "confirm"
+  | "success"
+  | "add-success"
+  | "update-success"
+  | "delete-success"
+  | "restore-success"
+  | "error"
+  | "info"
 
-const emit = defineEmits(["confirm", "cancel", "close", "update:showModal"])
+const props = withDefaults(
+  defineProps<{
+    showModal: boolean
+    mode?: ModalMode
+    title?: string
+    message?: string
+  }>(),
+  {
+    mode: "confirm",
+    title: "",
+    message: "",
+  }
+)
+
+const emit = defineEmits<{
+  confirm: []
+  cancel: []
+  close: []
+  "update:showModal": [value: boolean]
+}>()
 
 // Drag functionality
-const modalRef = ref(null)
+const modalRef = ref<HTMLElement | null>(null)
 const dragModalProps = {
   get showModal() {
     return props.showModal
   },
 }
 const { position, handleMouseDown } = useDragModal(dragModalProps)
+
+const handleOpenChange = (open: boolean): void => {
+  if (!open) {
+    handleClose()
+  }
+}
 
 // Computed properties cho từng mode
 const computedTitle = computed(() => {
@@ -249,17 +238,17 @@ const buttonClass = computed(() => {
   }
 })
 
-const handleClose = () => {
+const handleClose = (): void => {
   emit("close")
   emit("update:showModal", false)
 }
 
-const handleCancel = () => {
+const handleCancel = (): void => {
   emit("cancel")
   emit("update:showModal", false)
 }
 
-const handleConfirm = () => {
+const handleConfirm = (): void => {
   emit("confirm")
 }
 </script>
